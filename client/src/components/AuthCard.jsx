@@ -46,10 +46,11 @@ export function AuthCard() {
       navigate('/dashboard');
     } catch (error) {
       const serverMessage = error.response?.data?.message;
-      const serverDetails = error.response?.data?.details;
+      const status = error.response?.status;
+      const networkError = error.message;
       
-      toast.error('Authentication Error', {
-        description: serverDetails || serverMessage || 'Check your credentials and try again.',
+      toast.error(`Authentication Failed ${status ? `(${status})` : ''}`, {
+        description: serverMessage || (status === 401 ? 'Invalid credentials.' : `Network or Server Error: ${networkError}`),
       });
     }
   };

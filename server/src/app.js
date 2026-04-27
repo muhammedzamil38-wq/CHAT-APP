@@ -21,11 +21,22 @@ export const app = express();
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow any origin in development, or specific origins in production
-      if (env.nodeEnv === "development" || !origin || [env.clientOrigin, "http://192.168.8.47:5173", "http://localhost:5173"].includes(origin)) {
+      const allowedOrigins = [
+        env.clientOrigin, 
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173"
+      ];
+      
+      const isAllowed = !origin || 
+        env.nodeEnv === "development" || 
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app") || 
+        origin.endsWith(".onrender.com");
+
+      if (isAllowed) {
         callback(null, true);
       } else {
-        callback(new Error("CORS policy violation."));
+        callback(new Error(`CORS Error: Origin ${origin} not in mission parameters.`));
       }
     },
     credentials: true
