@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
+import { api } from '../lib/api';
 
 export function ChatArea({ selectedUser }) {
   const [messages, setMessages] = useState([]);
