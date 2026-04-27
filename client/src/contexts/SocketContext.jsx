@@ -10,9 +10,10 @@ export function SocketProvider({ children }) {
 
   useEffect(() => {
     if (user) {
-      const socketUrl = import.meta.env.VITE_SOCKET_URL?.includes('localhost') || !import.meta.env.VITE_SOCKET_URL
-        ? `http://${window.location.hostname}:5000`
-        : import.meta.env.VITE_SOCKET_URL;
+      const socketUrl = import.meta.env.VITE_SOCKET_URL || 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+          ? `http://${window.location.hostname}:5000` 
+          : window.location.origin);
 
       const newSocket = io(socketUrl, {
         withCredentials: true,

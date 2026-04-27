@@ -1,11 +1,15 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  if (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost')) {
-    return import.meta.env.VITE_API_URL;
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  
+  // In development (localhost), we usually use port 5000 for the backend
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return `http://${window.location.hostname}:5000`;
   }
-  // Fallback to the current window host but on port 5000
-  return `http://${window.location.hostname}:5000`;
+  
+  // In production, if served from the same host, use the origin
+  return window.location.origin;
 };
 
 export const api = axios.create({

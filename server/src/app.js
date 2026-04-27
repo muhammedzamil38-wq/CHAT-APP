@@ -43,4 +43,15 @@ app.use("/api/users", userRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/files", fileRoutes);
 
+if (env.nodeEnv === "production") {
+  const clientBuildPath = path.resolve("../client/dist");
+  app.use(express.static(clientBuildPath));
+  
+  app.get("*", (req, res) => {
+    if (!req.path.startsWith("/api")) {
+      res.sendFile(path.join(clientBuildPath, "index.html"));
+    }
+  });
+}
+
 app.use(errorHandler);
