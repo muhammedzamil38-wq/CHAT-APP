@@ -57,6 +57,16 @@ export const initializeSocket = (httpServer) => {
     }
     });
 
+    socket.on("message_edited", (message) => {
+      io.to(`user_${message.to}`).emit("message_edited", message);
+      io.to(`user_${message.senderId}`).emit("message_edited", message);
+    });
+
+    socket.on("message_deleted", ({ id, to, senderId }) => {
+      io.to(`user_${to}`).emit("message_deleted", { id });
+      io.to(`user_${senderId}`).emit("message_deleted", { id });
+    });
+
     socket.on("disconnect", () => {
       logMission(`Socket uplink closed: ${socket.id}`);
     });

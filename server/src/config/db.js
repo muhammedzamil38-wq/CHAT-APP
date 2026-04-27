@@ -45,9 +45,12 @@ export const initializeDatabase = async () => {
       sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       text TEXT NOT NULL,
+      is_edited BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+  
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT FALSE`);
 
   logMission("Database telemetry online. Tables verified.");
 };

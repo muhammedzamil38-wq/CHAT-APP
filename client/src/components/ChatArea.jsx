@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Send, Smile, Phone, Video, Info } from 'lucide-react';
+import { Paperclip, Send, Smile, Phone, Video, Info, MoreVertical, Copy, Edit2, Trash2, Forward } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useSocket } from '../contexts/SocketContext';
@@ -12,6 +12,9 @@ export function ChatArea({ selectedUser }) {
   const socket = useSocket();
   const { user } = useAuth();
   const endRef = useRef(null);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [forwardContent, setForwardContent] = useState('');
 
   useEffect(() => {
     if (!socket || !selectedUser) return;
@@ -26,9 +29,19 @@ export function ChatArea({ selectedUser }) {
       }
     };
 
+    const handleEdit = (editedMessage) => {
+      setMessages(prev => prev.map(m => m.id === editedMessage.id ? editedMessage : m));
+    };
+
+    const handleDelete = ({ id }) => {
+      setMessages(prev => prev.filter(m => m.id !== id));
+    };
+
     socket.on('receive_message', handleMessage);
+    socket.on('message_edited', handleEdit);
+    socket.on('message_deleted', handleDelete);
     
-    // Clear messages when user changes (since we don't have persistence yet)
+    // Clear messages when user changes
     setMessages([]);
 
     const fetchHistory = async () => {
@@ -43,8 +56,10 @@ export function ChatArea({ selectedUser }) {
 
     return () => {
       socket.off('receive_message', handleMessage);
+      socket.off('message_edited', handleEdit);
+      socket.off('message_deleted', handleDelete);
     };
-  }, [socket, selectedUser, user.id]);
+  }, [socket, selectedUser, user?.id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -62,6 +77,45 @@ export function ChatArea({ selectedUser }) {
 
     socket.emit('private_message', messageData);
     setInput('');
+  };
+
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Message copied');
+  };
+
+  const startEdit = (msg) => {
+    setEditingMessage(msg);
+    setInput(msg.text);
+  };
+
+  const submitEdit = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || !editingMessage) return;
+
+    try {
+      const res = await api.put(`/api/messages/${editingMessage.id}`, { text: input });
+      socket.emit('message_edited', res.data.message);
+      setEditingMessage(null);
+      setInput('');
+    } catch (error) {
+      toast.error('Failed to edit message');
+    }
+  };
+
+  const handleDeleteMsg = async (msgId) => {
+    if (!window.confirm('Purge this message from mission logs?')) return;
+    try {
+      const res = await api.delete(`/api/messages/${msgId}`);
+      socket.emit('message_deleted', res.data);
+    } catch (error) {
+      toast.error('Failed to delete message');
+    }
+  };
+
+  const handleForward = (text) => {
+    setForwardContent(text);
+    setShowForwardModal(true);
   };
 
   if (!selectedUser) {
@@ -105,9 +159,27 @@ export function ChatArea({ selectedUser }) {
       {/* Message List */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4 relative z-10">
         {messages.map((m) => (
-          <div key={m.id} className={`flex flex-col ${m.senderId === user.id ? 'items-end' : 'items-start'}`}>
-            <div className={`max-w-[75%] rounded-2xl px-4 py-2 mt-1 shadow-sm ${m.senderId === user.id ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border border-border/50 text-card-foreground rounded-tl-sm'}`}>
-              <p className="text-sm leading-relaxed">{m.text}</p>
+          <div key={m.id} className={`flex flex-col group ${m.senderId === user.id ? 'items-end' : 'items-start'}`}>
+            <div className="flex items-center gap-2 group">
+              {m.senderId === user.id && (
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleCopy(m.text)}><Copy className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => startEdit(m)}><Edit2 className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive" onClick={() => handleDeleteMsg(m.id)}><Trash2 className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleForward(m.text)}><Forward className="w-4 h-4" /></Button>
+                </div>
+              )}
+              <div className={`max-w-[75%] rounded-2xl px-4 py-2 mt-1 shadow-sm ${m.senderId === user.id ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border border-border/50 text-card-foreground rounded-tl-sm'}`}>
+                <p className="text-sm leading-relaxed">{m.text}</p>
+                {m.isEdited && <span className="text-[10px] opacity-70 block text-right mt-0.5">(edited)</span>}
+              </div>
+              {m.senderId !== user.id && (
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleCopy(m.text)}><Copy className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleForward(m.text)}><Forward className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive" onClick={() => handleDeleteMsg(m.id)}><Trash2 className="w-4 h-4" /></Button>
+                </div>
+              )}
             </div>
             <span className="text-[10px] text-muted-foreground mt-1 mx-1">
               {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -119,7 +191,13 @@ export function ChatArea({ selectedUser }) {
 
       {/* Input Area */}
       <div className="p-4 bg-card/30 backdrop-blur-md border-t border-border/40 shrink-0 relative z-10">
-        <form onSubmit={handleSend} className="flex items-end gap-2 bg-background/50 border border-border/50 p-2 rounded-2xl focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all shadow-sm">
+        {editingMessage && (
+          <div className="mb-2 flex items-center justify-between text-xs text-primary px-2 bg-primary/10 py-1 rounded-lg">
+            <span>Editing message...</span>
+            <button onClick={() => { setEditingMessage(null); setInput(''); }} className="underline">Cancel</button>
+          </div>
+        )}
+        <form onSubmit={editingMessage ? submitEdit : handleSend} className="flex items-end gap-2 bg-background/50 border border-border/50 p-2 rounded-2xl focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all shadow-sm">
           <Button type="button" variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-foreground shrink-0 h-10 w-10">
             <Smile className="w-5 h-5" />
           </Button>
@@ -138,6 +216,24 @@ export function ChatArea({ selectedUser }) {
           </Button>
         </form>
       </div>
+
+      {/* Basic Forward Modal */}
+      {showForwardModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-card w-full max-w-md p-6 rounded-2xl border border-border shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4">Forward Message</h3>
+            <p className="text-sm text-muted-foreground mb-4 italic">"{forwardContent.substring(0, 50)}..."</p>
+            <div className="space-y-2 max-h-60 overflow-y-auto mb-6">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Select Target</p>
+              {/* This is a simple implementation, ideally you'd list all friends here */}
+              <p className="text-xs italic opacity-50">Select a contact from your sidebar to forward. (Work in Progress)</p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setShowForwardModal(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

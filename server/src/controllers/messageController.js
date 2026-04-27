@@ -10,5 +10,20 @@ export const messageController = {
     console.log(`[HISTORY-DEBUG] Fetching history between ${myId} and ${otherId}. Found ${history.length} messages.`);
     
     res.status(200).json({ history });
+  },
+
+  updateMessage: async (req, res) => {
+    const { id } = req.params;
+    const { text } = req.body;
+    const updated = await messageRepository.update(Number(id), req.user.id, text);
+    if (!updated) throw new AppError("Message not found or unauthorized", 404);
+    res.status(200).json({ message: updated });
+  },
+
+  deleteMessage: async (req, res) => {
+    const { id } = req.params;
+    const deleted = await messageRepository.delete(Number(id), req.user.id);
+    if (!deleted) throw new AppError("Message not found or unauthorized", 404);
+    res.status(200).json({ message: "Message purged", id: deleted.id, to: deleted.to, senderId: deleted.senderId });
   }
 };
