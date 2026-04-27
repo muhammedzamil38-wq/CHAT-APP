@@ -3,7 +3,7 @@ import { messageRepository } from "../repositories/messageRepository.js";
 export const messageController = {
   getHistory: async (req, res) => {
     const { userId } = req.params;
-    const history = await messageRepository.getConversation(req.user.id, userId);
+    const history = await messageRepository.getConversation(Number(req.user.id), Number(userId));
     
     const formattedHistory = history.map(m => ({
       ...m,

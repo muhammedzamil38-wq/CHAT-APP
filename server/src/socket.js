@@ -41,8 +41,12 @@ export const initializeSocket = (httpServer) => {
     });
 
     socket.on("private_message", async ({ to, text, senderId }) => {
-      // Save to database
-      const savedMessage = await messageRepository.save(senderId, to, text);
+      try {
+        const sId = Number(senderId);
+        const rId = Number(to);
+        logMission(`Message from ${sId} to ${rId}: "${text.substring(0, 20)}..."`);
+        const savedMessage = await messageRepository.save(sId, rId, text);
+        logMission(`Message saved with ID: ${savedMessage.id}`);
       
       const message = {
         ...savedMessage,
@@ -53,6 +57,9 @@ export const initializeSocket = (httpServer) => {
       io.to(`user_${to}`).emit("receive_message", message);
       // Also emit back to the sender (for multi-device sync or just confirmation)
       io.to(`user_${senderId}`).emit("receive_message", message);
+    } catch (error) {
+      console.error("[MISSION-CONTROL][SOCKET-ERROR] Failed to save/emit message:", error.message);
+    }
     });
 
     socket.on("disconnect", () => {
