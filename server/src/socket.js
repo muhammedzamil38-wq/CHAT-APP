@@ -9,10 +9,22 @@ export const initializeSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
       origin: (origin, callback) => {
-        if (env.nodeEnv === "development" || !origin || [env.clientOrigin, "http://127.0.0.1:5173", "http://localhost:5173"].includes(origin)) {
+        const allowedOrigins = [
+          env.clientOrigin, 
+          "http://localhost:5173", 
+          "http://127.0.0.1:5173"
+        ];
+        
+        const isAllowed = !origin || 
+          env.nodeEnv === "development" || 
+          allowedOrigins.includes(origin) ||
+          origin.endsWith(".vercel.app") || 
+          origin.endsWith(".onrender.com");
+
+        if (isAllowed) {
           callback(null, true);
         } else {
-          callback(new Error("CORS policy violation."));
+          callback(new Error(`Socket CORS Error: Origin ${origin} unauthorized.`));
         }
       },
       credentials: true
