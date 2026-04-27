@@ -74,9 +74,7 @@ if (env.nodeEnv === "production") {
   app.use(express.static(clientBuildPath));
   
   app.get("*", (req, res) => {
-    if (!req.path.startsWith("/api")) {
-      res.sendFile(path.join(clientBuildPath, "index.html"));
-    }
+    res.sendFile(path.join(clientBuildPath, "index.html"));
   });
 }
 
