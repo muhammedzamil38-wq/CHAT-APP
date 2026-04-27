@@ -15,15 +15,25 @@ export const messageController = {
   updateMessage: async (req, res) => {
     const { id } = req.params;
     const { text } = req.body;
+    console.log(`[EDIT-DEBUG] Attempting to edit message ${id} by user ${req.user.id}`);
     const updated = await messageRepository.update(Number(id), req.user.id, text);
-    if (!updated) throw new AppError("Message not found or unauthorized", 404);
+    if (!updated) {
+      console.error(`[EDIT-ERROR] Message ${id} not found or user ${req.user.id} unauthorized`);
+      throw new AppError("Message not found or unauthorized", 404);
+    }
+    console.log(`[EDIT-SUCCESS] Message ${id} updated.`);
     res.status(200).json({ message: updated });
   },
 
   deleteMessage: async (req, res) => {
     const { id } = req.params;
+    console.log(`[DELETE-DEBUG] Attempting to delete message ${id} by user ${req.user.id}`);
     const deleted = await messageRepository.delete(Number(id), req.user.id);
-    if (!deleted) throw new AppError("Message not found or unauthorized", 404);
+    if (!deleted) {
+      console.error(`[DELETE-ERROR] Message ${id} not found or user ${req.user.id} unauthorized`);
+      throw new AppError("Message not found or unauthorized", 404);
+    }
+    console.log(`[DELETE-SUCCESS] Message ${id} purged.`);
     res.status(200).json({ message: "Message purged", id: deleted.id, to: deleted.to, senderId: deleted.senderId });
   }
 };
