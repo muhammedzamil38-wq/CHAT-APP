@@ -65,6 +65,12 @@ app.use("/api/files", fileRoutes);
 
 if (env.nodeEnv === "production") {
   const clientBuildPath = path.resolve("client/dist");
+  console.log(`[PRODUCTION-DEBUG] Production mode active. Serving static files from: ${clientBuildPath}`);
+  
+  if (!fs.existsSync(clientBuildPath)) {
+    console.error(`[PRODUCTION-ERROR] Static build folder NOT FOUND at ${clientBuildPath}. Did you run 'npm run build'?`);
+  }
+
   app.use(express.static(clientBuildPath));
   
   app.get("*", (req, res) => {
