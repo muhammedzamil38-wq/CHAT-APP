@@ -27,13 +27,22 @@ export const messageController = {
 
   deleteMessage: async (req, res) => {
     const { id } = req.params;
-    console.log(`[DELETE-DEBUG] Attempting to delete message ${id} by user ${req.user.id}`);
+    const { mode } = req.query; // 'me' or 'everyone'
+    
+    console.log(`[DELETE-DEBUG] Attempting to delete message ${id} in mode: ${mode} by user ${req.user.id}`);
+    
+    if (mode === 'me') {
+      await messageRepository.hideForUser(Number(id), req.user.id);
+      return res.status(200).json({ message: "Message hidden for you", id: Number(id), mode: 'me' });
+    }
+
     const deleted = await messageRepository.delete(Number(id), req.user.id);
     if (!deleted) {
-      console.error(`[DELETE-ERROR] Message ${id} not found or user ${req.user.id} unauthorized`);
-      throw new AppError("Message not found or unauthorized", 404);
+      console.error(`[DELETE-ERROR] Message ${id} not found or user ${req.user.id} unauthorized for full purge`);
+      throw new AppError("Message not found or unauthorized to delete for everyone", 404);
     }
-    console.log(`[DELETE-SUCCESS] Message ${id} purged.`);
-    res.status(200).json({ message: "Message purged", id: deleted.id, to: deleted.to, senderId: deleted.senderId });
+    
+    console.log(`[DELETE-SUCCESS] Message ${id} purged for everyone.`);
+    res.status(200).json({ message: "Message purged for everyone", id: deleted.id, to: deleted.to, senderId: deleted.senderId, mode: 'everyone' });
   }
 };

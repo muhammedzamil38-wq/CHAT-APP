@@ -51,6 +51,15 @@ export const initializeDatabase = async () => {
   `);
   
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT FALSE`);
+  
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS message_visibility (
+      id SERIAL PRIMARY KEY,
+      message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(message_id, user_id)
+    )
+  `);
 
   logMission("Database telemetry online. Tables verified.");
 };

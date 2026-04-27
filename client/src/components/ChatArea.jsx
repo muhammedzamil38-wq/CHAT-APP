@@ -15,6 +15,8 @@ export function ChatArea({ selectedUser }) {
   const [editingMessage, setEditingMessage] = useState(null);
   const [showForwardModal, setShowForwardModal] = useState(false);
   const [forwardContent, setForwardContent] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState(null);
 
   useEffect(() => {
     if (!socket || !selectedUser) return;
@@ -104,10 +106,31 @@ export function ChatArea({ selectedUser }) {
   };
 
   const handleDeleteMsg = async (msgId) => {
-    if (!window.confirm('Purge this message from mission logs?')) return;
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+
+    if (Number(msg.senderId) === Number(user?.id)) {
+      // It's my message, show options
+      setMessageToDelete(msg);
+      setShowDeleteModal(true);
+    } else {
+      // It's someone else's message, only allow 'Delete for Me'
+      if (window.confirm('Hide this message from your view?')) {
+        executeDelete(msgId, 'me');
+      }
+    }
+  };
+
+  const executeDelete = async (msgId, mode) => {
     try {
-      const res = await api.delete(`/api/messages/${msgId}`);
-      socket.emit('message_deleted', res.data);
+      const res = await api.delete(`/api/messages/${msgId}?mode=${mode}`);
+      if (mode === 'everyone') {
+        socket.emit('message_deleted', res.data);
+      } else {
+        // Just remove from local state
+        setMessages(prev => prev.filter(m => m.id !== msgId));
+      }
+      setShowDeleteModal(false);
     } catch (error) {
       toast.error('Failed to delete message');
     }
@@ -164,7 +187,9 @@ export function ChatArea({ selectedUser }) {
               {m.senderId === user.id && (
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleCopy(m.text)}><Copy className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => startEdit(m)}><Edit2 className="w-4 h-4" /></Button>
+                  {(new Date() - new Date(m.createdAt) < 10 * 60 * 1000) && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => startEdit(m)}><Edit2 className="w-4 h-4" /></Button>
+                  )}
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive" onClick={() => handleDeleteMsg(m.id)}><Trash2 className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleForward(m.text)}><Forward className="w-4 h-4" /></Button>
                 </div>
@@ -216,6 +241,40 @@ export function ChatArea({ selectedUser }) {
           </Button>
         </form>
       </div>
+
+      {/* Delete Options Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-card w-full max-w-sm p-6 rounded-2xl border border-border shadow-2xl">
+            <h3 className="text-lg font-semibold mb-2">Delete Message?</h3>
+            <p className="text-sm text-muted-foreground mb-6">Choose how you want to purge this message from the logs.</p>
+            <div className="flex flex-col gap-3">
+              <Button 
+                variant="destructive" 
+                className="w-full justify-start gap-2" 
+                onClick={() => executeDelete(messageToDelete.id, 'everyone')}
+              >
+                <Trash2 className="w-4 h-4" /> Delete for Everyone
+              </Button>
+              <Button 
+                variant="secondary" 
+                className="w-full justify-start gap-2" 
+                onClick={() => executeDelete(messageToDelete.id, 'me')}
+              >
+                <Info className="w-4 h-4" /> Delete for Me
+              </Button>
+              <hr className="border-border/50 my-1" />
+              <Button 
+                variant="ghost" 
+                className="w-full" 
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Basic Forward Modal */}
       {showForwardModal && (
