@@ -10,13 +10,16 @@ export function SocketProvider({ children }) {
 
   useEffect(() => {
     if (user) {
-      const socketUrl = import.meta.env.VITE_SOCKET_URL || 
+      // Prioritize VITE_API_URL if it exists, otherwise fall back to dynamic detection
+      const apiBase = import.meta.env.VITE_API_URL;
+      const socketUrl = apiBase || 
         (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
           ? `http://${window.location.hostname}:5000` 
           : window.location.origin);
 
       const newSocket = io(socketUrl, {
         withCredentials: true,
+        transports: ['websocket', 'polling']
       });
 
       newSocket.on('connect', () => {

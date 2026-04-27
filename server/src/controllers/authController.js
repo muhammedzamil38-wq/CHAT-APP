@@ -59,6 +59,7 @@ export const authController = {
     }
 
     const user = await authService.getCurrentUser(req.user.id);
+    console.log(`[AUTH-ME] Requesting ID: ${req.user.id}, Found Email: ${user?.email}`);
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.status(200).json({ user });
   },
