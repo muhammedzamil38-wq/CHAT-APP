@@ -44,7 +44,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/files", fileRoutes);
 
 if (env.nodeEnv === "production") {
-  const clientBuildPath = path.resolve("../client/dist");
+  const clientBuildPath = path.resolve("client/dist");
   app.use(express.static(clientBuildPath));
   
   app.get("*", (req, res) => {

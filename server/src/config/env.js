@@ -4,12 +4,7 @@ dotenv.config();
 
 const requiredKeys = [
   "DATABASE_URL",
-  "JWT_SECRET",
-  "CLOUDINARY_CLOUD_NAME",
-  "CLOUDINY_API_KEY",
-  "CLOUDINARY_API_SECRET",
-  "EMAIL_USER",
-  "EMAIL_PASS"
+  "JWT_SECRET"
 ];
 
 for (const key of requiredKeys) {
