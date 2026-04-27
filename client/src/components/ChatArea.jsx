@@ -17,10 +17,10 @@ export function ChatArea({ selectedUser }) {
 
     const handleMessage = (message) => {
       // Only show messages if they belong to this conversation
-      if (
-        (message.senderId === user.id && message.to === selectedUser.id) ||
-        (message.senderId === selectedUser.id)
-      ) {
+      const isFromMe = Number(message.senderId) === Number(user?.id) && Number(message.to) === Number(selectedUser?.id);
+      const isToMe = Number(message.senderId) === Number(selectedUser?.id) && Number(message.to) === Number(user?.id);
+      
+      if (isFromMe || isToMe) {
         setMessages((prev) => [...prev, message]);
       }
     };

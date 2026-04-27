@@ -4,12 +4,14 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
+import { useSocket } from '../contexts/SocketContext';
 
 export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
   const [contacts, setContacts] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const socket = useSocket();
 
   const fetchFriends = async () => {
     try {
@@ -31,6 +33,38 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
   useEffect(() => {
     fetchFriends();
   }, []);
+
+  // Listen for incoming messages to update unread counts
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (message) => {
+      // If we are not currently chatting with this person, increment unread
+      if (!selectedUser || message.senderId !== selectedUser.id) {
+        setContacts(prev => prev.map(contact => {
+          if (contact.id === message.senderId) {
+            return { ...contact, unread: (contact.unread || 0) + 1, lastMessage: message.text };
+          }
+          return contact;
+        }));
+      }
+    };
+
+    socket.on('receive_message', handleNewMessage);
+    return () => socket.off('receive_message', handleNewMessage);
+  }, [socket, selectedUser]);
+
+  // Reset unread count when a user is selected
+  useEffect(() => {
+    if (selectedUser) {
+      setContacts(prev => prev.map(contact => {
+        if (contact.id === selectedUser.id) {
+          return { ...contact, unread: 0 };
+        }
+        return contact;
+      }));
+    }
+  }, [selectedUser]);
 
   useEffect(() => {
     const search = async () => {
@@ -141,18 +175,21 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
             >
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary shrink-0 relative">
                 {contact.avatar}
-                {contact.unread > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-[10px] flex items-center justify-center text-white font-bold border-2 border-background">
-                    {contact.unread}
-                  </span>
-                )}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline mb-0.5">
-                  <h3 className="font-medium text-sm truncate">{contact.username || contact.email}</h3>
-                  <span className="text-xs text-muted-foreground shrink-0 ml-2">{contact.time}</span>
+              <div className="flex-1 min-w-0 text-left">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium truncate">
+                    {contact.username || contact.email}
+                  </p>
+                  {contact.unread > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground animate-in zoom-in duration-300">
+                      {contact.unread}
+                    </span>
+                  )}
                 </div>
-                <p className="text-sm text-muted-foreground truncate">{contact.lastMessage}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {contact.lastMessage}
+                </p>
               </div>
             </div>
           ))
