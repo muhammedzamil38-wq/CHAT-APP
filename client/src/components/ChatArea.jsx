@@ -109,7 +109,9 @@ export function ChatArea({ selectedUser }) {
             <div className={`max-w-[75%] rounded-2xl px-4 py-2 mt-1 shadow-sm ${m.senderId === user.id ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border border-border/50 text-card-foreground rounded-tl-sm'}`}>
               <p className="text-sm leading-relaxed">{m.text}</p>
             </div>
-            <span className="text-[10px] text-muted-foreground mt-1 mx-1">{m.time}</span>
+            <span className="text-[10px] text-muted-foreground mt-1 mx-1">
+              {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
           </div>
         ))}
         <div ref={endRef} />

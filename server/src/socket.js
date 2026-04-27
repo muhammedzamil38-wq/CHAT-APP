@@ -48,15 +48,10 @@ export const initializeSocket = (httpServer) => {
         const savedMessage = await messageRepository.save(sId, rId, text);
         logMission(`Message saved with ID: ${savedMessage.id}`);
       
-      const message = {
-        ...savedMessage,
-        time: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      
-      // Emit to the recipient
-      io.to(`user_${to}`).emit("receive_message", message);
-      // Also emit back to the sender (for multi-device sync or just confirmation)
-      io.to(`user_${senderId}`).emit("receive_message", message);
+        // Emit to the recipient
+        io.to(`user_${to}`).emit("receive_message", savedMessage);
+        // Also emit back to the sender (for multi-device sync or just confirmation)
+        io.to(`user_${senderId}`).emit("receive_message", savedMessage);
     } catch (error) {
       console.error("[MISSION-CONTROL][SOCKET-ERROR] Failed to save/emit message:", error.message);
     }
