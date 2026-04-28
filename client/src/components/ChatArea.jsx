@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Send, Smile, Phone, Video, Info, MoreVertical, Copy, Edit2, Trash2, Forward, FileIcon, Download, X, ImageIcon, Loader2 } from 'lucide-react';
+import { Paperclip, Send, Smile, Phone, Video, Info, MoreVertical, Copy, Edit2, Trash2, Forward, FileIcon, Download, X, ImageIcon, Loader2, Check, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
+import { ImageEditorModal } from './ImageEditorModal';
 
 export function ChatArea({ selectedUser }) {
   const [messages, setMessages] = useState([]);
@@ -20,6 +21,8 @@ export function ChatArea({ selectedUser }) {
   const [messageToDelete, setMessageToDelete] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [editingFile, setEditingFile] = useState(null);
+  const [showEditor, setShowEditor] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -119,8 +122,20 @@ export function ChatArea({ selectedUser }) {
         toast.error('File size exceeds 50MB limit');
         return;
       }
-      setSelectedFile(file);
+      
+      if (file.type.startsWith('image/')) {
+        setEditingFile(file);
+        setShowEditor(true);
+      } else {
+        setSelectedFile(file);
+      }
     }
+  };
+
+  const handleEditorConfirm = (editedFile) => {
+    setSelectedFile(editedFile);
+    setShowEditor(false);
+    setEditingFile(null);
   };
 
   const handleCopy = (text) => {
@@ -197,8 +212,9 @@ export function ChatArea({ selectedUser }) {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden">
-      {/* Subtle Chat Background Accent */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/5 via-background to-background pointer-events-none" />
+      {/* WhatsApp-Style Chat Background */}
+      <div className="absolute inset-0 bg-[#0b141a]" />
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')` }} />
 
       {/* Chat Header */}
       <div className="h-16 border-b border-border/40 bg-card/40 backdrop-blur-md flex items-center justify-between px-6 shrink-0 relative z-10">
@@ -236,10 +252,10 @@ export function ChatArea({ selectedUser }) {
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleForward(m.text)}><Forward className="w-4 h-4" /></Button>
                 </div>
               )}
-              <div className={`max-w-[75%] rounded-2xl px-4 py-2 mt-1 shadow-sm ${m.senderId === user.id ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border border-border/50 text-card-foreground rounded-tl-sm'}`}>
-                <p className="text-sm leading-relaxed">{m.text}</p>
+              <div className={`max-w-[75%] rounded-2xl px-3 py-1.5 mt-1 shadow-sm relative ${m.senderId === user.id ? 'bg-[#005c4b] text-white rounded-tr-none' : 'bg-[#202c33] text-[#e9edef] rounded-tl-none border border-white/5'}`}>
+                <p className="text-[14.2px] leading-relaxed pr-10">{m.text}</p>
                 {m.fileUrl && (
-                  <div className="mt-2 overflow-hidden rounded-lg border border-white/10">
+                  <div className="mt-1.5 overflow-hidden rounded-lg border border-white/10">
                     {m.fileType?.startsWith('image/') ? (
                       <img src={m.fileUrl} alt="attachment" className="max-w-full h-auto object-cover max-h-60" />
                     ) : (
@@ -258,7 +274,15 @@ export function ChatArea({ selectedUser }) {
                     )}
                   </div>
                 )}
-                {m.isEdited && <span className="text-[10px] opacity-70 block text-right mt-0.5">(edited)</span>}
+                <div className="flex items-center justify-end gap-1 mt-0.5">
+                  {m.isEdited && <span className="text-[10px] opacity-50">(edited)</span>}
+                  <span className="text-[10px] opacity-60 uppercase">
+                    {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                  </span>
+                  {m.senderId === user.id && (
+                    <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
+                  )}
+                </div>
               </div>
               {m.senderId !== user.id && (
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
@@ -268,9 +292,6 @@ export function ChatArea({ selectedUser }) {
                 </div>
               )}
             </div>
-            <span className="text-[10px] text-muted-foreground mt-1 mx-1">
-              {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
           </div>
         ))}
         <div ref={endRef} />
@@ -380,6 +401,17 @@ export function ChatArea({ selectedUser }) {
             </div>
           </div>
         </div>
+      )}
+      {/* Image Editor Modal */}
+      {showEditor && editingFile && (
+        <ImageEditorModal 
+          file={editingFile} 
+          onConfirm={handleEditorConfirm}
+          onCancel={() => {
+            setShowEditor(false);
+            setEditingFile(null);
+          }}
+        />
       )}
     </div>
   );
