@@ -11,6 +11,12 @@ const requiredKeys = [
 ];
 
 for (const key of requiredKeys) {
+  if (key === "CLOUDINARY_API_KEY") {
+    if (!process.env.CLOUDINARY_API_KEY && !process.env.CLOUDINY_API_KEY) {
+      throw new Error(`[MISSION-CONTROL] Configuration anomaly detected: missing ${key}.`);
+    }
+    continue;
+  }
   if (!process.env[key]) {
     throw new Error(`[MISSION-CONTROL] Configuration anomaly detected: missing ${key}.`);
   }
@@ -22,7 +28,7 @@ export const env = {
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET,
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
-  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || process.env.CLOUDINY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
   emailUser: process.env.EMAIL_USER,
   emailPass: process.env.EMAIL_PASS,
