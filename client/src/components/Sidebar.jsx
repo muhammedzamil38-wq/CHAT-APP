@@ -20,8 +20,8 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
       setContacts(users.map(u => ({
         ...u,
         avatar: (u.username || u.email)[0].toUpperCase(),
-        lastMessage: 'Secure link active',
-        time: '',
+        lastMessage: u.lastMessage || 'Secure link active',
+        time: u.lastMessageAt ? new Date(u.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
         unread: 0
       })));
     } catch (error) {

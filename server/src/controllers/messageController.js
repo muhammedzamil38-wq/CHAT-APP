@@ -6,10 +6,21 @@ export const messageController = {
     const myId = Number(req.user.id);
     const otherId = Number(userId);
     
-    const messages = await messageRepository.getConversation(myId, otherId);
-    console.log(`[HISTORY-DEBUG] Fetching history between ${myId} and ${otherId}. Found ${messages.length} messages.`);
+    console.log(`[MISSION-CONTROL][HISTORY] Syncing logs between Crew #${myId} and Contact #${otherId}`);
     
-    res.status(200).json({ messages });
+    try {
+      const messages = await messageRepository.getConversation(myId, otherId);
+      console.log(`[MISSION-CONTROL][HISTORY] Successfully retrieved ${messages?.length || 0} mission logs.`);
+      
+      // Safety: Ensure we always return an array
+      res.status(200).json({ 
+        messages: messages || [],
+        telemetry: { myId, otherId, count: messages?.length || 0 }
+      });
+    } catch (error) {
+      console.error(`[MISSION-CONTROL][ERROR] History sync failed:`, error);
+      throw error;
+    }
   },
 
   updateMessage: async (req, res) => {

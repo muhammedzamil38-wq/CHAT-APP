@@ -9,7 +9,7 @@ const EMOJI_CATEGORIES = [
 
 export function EmojiPicker({ onEmojiSelect, onClose }) {
   return (
-    <div className="absolute bottom-20 left-4 w-72 h-96 glass rounded-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300 z-50">
+    <div className="absolute bottom-20 left-4 right-4 md:right-auto md:w-72 h-80 md:h-96 glass rounded-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300 z-50 shadow-2xl border border-white/10">
       {/* Header */}
       <div className="p-3 border-b border-border/50 flex items-center justify-between bg-white/5">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Select Emoji</span>

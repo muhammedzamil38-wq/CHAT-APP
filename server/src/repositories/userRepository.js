@@ -54,10 +54,20 @@ export const userRepository = {
 
   findFriends: async (userId) => {
     const result = await pool.query(
-      `SELECT u.id, u.email, u.username FROM users u
+      `SELECT u.id, u.email, u.username,
+        (SELECT text FROM messages 
+         WHERE (sender_id = u.id AND recipient_id = $1) 
+            OR (sender_id = $1 AND recipient_id = u.id)
+         ORDER BY created_at DESC LIMIT 1) AS "lastMessage",
+        (SELECT created_at FROM messages 
+         WHERE (sender_id = u.id AND recipient_id = $1) 
+            OR (sender_id = $1 AND recipient_id = u.id)
+         ORDER BY created_at DESC LIMIT 1) AS "lastMessageAt"
+       FROM users u
        JOIN friends f ON (f.friend_id = u.id AND f.user_id = $1)
           OR (f.user_id = u.id AND f.friend_id = $1)
-       WHERE u.id != $1`,
+       WHERE u.id != $1
+       ORDER BY "lastMessageAt" DESC NULLS LAST`,
       [userId]
     );
     return result.rows;
