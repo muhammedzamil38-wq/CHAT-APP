@@ -227,8 +227,8 @@ export function ChatArea({ selectedUser }) {
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden">
       {/* WhatsApp-Style Chat Background */}
-      <div className="absolute inset-0 bg-[#0b141a]" />
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')` }} />
+      <div className="absolute inset-0 bg-[hsl(var(--chat-bg))]" />
+      <div className="absolute inset-0 opacity-[0.05] pointer-events-none mix-blend-overlay" style={{ backgroundImage: `url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')` }} />
 
       {/* Chat Header */}
       <div className="h-16 border-b border-border/40 bg-card/40 backdrop-blur-md flex items-center justify-between px-6 shrink-0 relative z-10">
@@ -266,7 +266,7 @@ export function ChatArea({ selectedUser }) {
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleForward(m.text)}><Forward className="w-4 h-4" /></Button>
                 </div>
               )}
-              <div className={`max-w-[75%] rounded-2xl px-3 py-1.5 mt-1 shadow-sm relative ${m.senderId === user.id ? 'bg-[#005c4b] text-white rounded-tr-none' : 'bg-[#202c33] text-[#e9edef] rounded-tl-none border border-white/5'}`}>
+              <div className={`max-w-[75%] rounded-2xl px-3 py-1.5 mt-1 shadow-sm relative ${m.senderId === user.id ? 'bg-[hsl(var(--sender-bubble))] text-[hsl(var(--bubble-text))] rounded-tr-none' : 'bg-[hsl(var(--recipient-bubble))] text-[hsl(var(--bubble-text))] rounded-tl-none border border-border/50'}`}>
                 <p className="text-[14.2px] leading-relaxed pr-10">{m.text}</p>
                 {m.fileUrl && (
                   <div className="mt-1.5 overflow-hidden rounded-lg border border-white/10">

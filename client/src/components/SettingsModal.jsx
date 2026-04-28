@@ -2,11 +2,13 @@ import React from 'react';
 import { X, LogOut, Trash2, User, Shield, Bell, Moon } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
 
 export function SettingsModal({ isOpen, onClose }) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   if (!isOpen) return null;
 
@@ -53,8 +55,12 @@ export function SettingsModal({ isOpen, onClose }) {
             <Button variant="ghost" className="w-full justify-start gap-3 h-12 text-muted-foreground hover:text-foreground">
               <Bell className="w-5 h-5" /> Notifications
             </Button>
-            <Button variant="ghost" className="w-full justify-start gap-3 h-12 text-muted-foreground hover:text-foreground">
-              <Moon className="w-5 h-5" /> Appearance
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start gap-3 h-12 text-muted-foreground hover:text-foreground"
+              onClick={toggleTheme}
+            >
+              <Moon className="w-5 h-5" /> Appearance: <span className="font-bold text-primary ml-auto">{theme.toUpperCase()}</span>
             </Button>
             <Button variant="ghost" className="w-full justify-start gap-3 h-12 text-muted-foreground hover:text-foreground">
               <User className="w-5 h-5" /> Privacy
