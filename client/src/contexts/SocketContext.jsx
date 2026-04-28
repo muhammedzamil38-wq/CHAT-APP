@@ -8,9 +8,15 @@ export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const { user } = useAuth();
+  const [notificationSound] = useState(new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'));
 
   useEffect(() => {
     if (user) {
+      // Request Notification Permission
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+
       const apiBase = import.meta.env.VITE_API_URL;
       const socketUrl = apiBase || 
         (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -28,7 +34,6 @@ export function SocketProvider({ children }) {
       });
 
       newSocket.on('getOnlineUsers', (users) => {
-        console.log('[SOCKET] Online users updated:', users);
         setOnlineUsers(users);
       });
 
@@ -44,8 +49,21 @@ export function SocketProvider({ children }) {
     }
   }, [user]);
 
+  const triggerNotification = (senderName, messageText) => {
+    // Play sound
+    notificationSound.play().catch(e => console.log('Audio playback blocked by browser policy'));
+
+    // Show Notification if permission granted and tab hidden
+    if (Notification.permission === 'granted') {
+      new Notification(senderName, {
+        body: messageText,
+        icon: '/favicon.ico', // You can replace with app logo
+      });
+    }
+  };
+
   return (
-    <SocketContext.Provider value={{ socket, onlineUsers }}>
+    <SocketContext.Provider value={{ socket, onlineUsers, triggerNotification }}>
       {children}
     </SocketContext.Provider>
   );

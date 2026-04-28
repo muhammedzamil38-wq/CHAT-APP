@@ -28,16 +28,25 @@ export function ChatArea({ selectedUser }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
 
+  const triggerNotification = (senderName, text) => {
+    if (Notification.permission === 'granted') {
+      new Notification(`New message from ${senderName}`, {
+        body: text,
+      });
+    }
+  };
+
   useEffect(() => {
     if (!socket || !selectedUser) return;
 
     const handleMessage = (message) => {
-      // Only show messages if they belong to this conversation
-      const isFromMe = Number(message.senderId) === Number(user?.id) && Number(message.to) === Number(selectedUser?.id);
-      const isToMe = Number(message.senderId) === Number(selectedUser?.id) && Number(message.to) === Number(user?.id);
-      
-      if (isFromMe || isToMe) {
+      if (Number(message.senderId) === Number(selectedUser.id) || Number(message.to) === Number(selectedUser.id)) {
         setMessages((prev) => [...prev, message]);
+        
+        // If tab is hidden, still trigger a notification even if this is the active chat
+        if (document.visibilityState === 'hidden' && Number(message.senderId) === Number(selectedUser.id)) {
+          triggerNotification(selectedUser.username || selectedUser.email, message.text || 'Shared a file');
+        }
       }
     };
 

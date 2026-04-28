@@ -11,7 +11,7 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const { socket, onlineUsers } = useSocket();
+  const { socket, onlineUsers, triggerNotification } = useSocket();
 
   const fetchFriends = async () => {
     try {
@@ -39,10 +39,16 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
     if (!socket) return;
 
     const handleNewMessage = (message) => {
-      // If we are not currently chatting with this person, increment unread
-      if (!selectedUser || message.senderId !== selectedUser.id) {
+      // If we are not currently chatting with this person, trigger notification and unread
+      if (!selectedUser || Number(message.senderId) !== Number(selectedUser.id)) {
+        // Find the contact name for the notification
+        const sender = contacts.find(c => Number(c.id) === Number(message.senderId));
+        const senderName = sender ? (sender.username || sender.email) : 'New Message';
+        
+        triggerNotification(senderName, message.text || 'Shared a file');
+
         setContacts(prev => prev.map(contact => {
-          if (contact.id === message.senderId) {
+          if (Number(contact.id) === Number(message.senderId)) {
             return { ...contact, unread: (contact.unread || 0) + 1, lastMessage: message.text };
           }
           return contact;
