@@ -7,6 +7,7 @@ import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import { ImageEditorModal } from './ImageEditorModal';
+import { EmojiPicker } from './EmojiPicker';
 
 export function ChatArea({ selectedUser }) {
   const [messages, setMessages] = useState([]);
@@ -24,6 +25,7 @@ export function ChatArea({ selectedUser }) {
   const [editingFile, setEditingFile] = useState(null);
   const [showEditor, setShowEditor] = useState(false);
   const [filePreview, setFilePreview] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -207,6 +209,10 @@ export function ChatArea({ selectedUser }) {
     }
   };
 
+  const handleEmojiSelect = (emoji) => {
+    setInput(prev => prev + emoji);
+  };
+
   const handleForward = (text) => {
     setForwardContent(text);
     setShowForwardModal(true);
@@ -345,8 +351,20 @@ export function ChatArea({ selectedUser }) {
           </div>
         )}
 
-        <form onSubmit={editingMessage ? submitEdit : handleSend} className="flex items-end gap-2 bg-background/50 border border-border/50 p-2 rounded-2xl focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all shadow-sm">
-          <Button type="button" variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-foreground shrink-0 h-10 w-10">
+        <form onSubmit={editingMessage ? submitEdit : handleSend} className="flex items-end gap-2 bg-background/50 border border-border/50 p-2 rounded-2xl focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all shadow-sm relative">
+          {showEmojiPicker && (
+            <EmojiPicker 
+              onEmojiSelect={handleEmojiSelect} 
+              onClose={() => setShowEmojiPicker(false)} 
+            />
+          )}
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="icon" 
+            className={`rounded-full shrink-0 h-10 w-10 ${showEmojiPicker ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          >
             <Smile className="w-5 h-5" />
           </Button>
           <Button 
