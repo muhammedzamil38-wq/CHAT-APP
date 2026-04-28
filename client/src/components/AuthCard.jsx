@@ -25,6 +25,8 @@ const signupSchema = loginSchema.extend({
 
 export function AuthCard() {
   const [isLogin, setIsLogin] = useState(true);
+  const [showOTP, setShowOTP] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
   const navigate = useNavigate();
 
   const form = useForm({
@@ -37,23 +39,26 @@ export function AuthCard() {
 
   const onSubmit = async (data) => {
     try {
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-      const res = await api.post(endpoint, data);
-
-      login(res.data.user);
-
-      toast.success(isLogin ? 'Welcome back' : 'Account created', {
-        description: 'Successfully signed into Gossip.',
-      });
-      navigate('/dashboard');
+      if (isLogin) {
+        const res = await api.post('/api/auth/login', data);
+        login(res.data.user);
+        toast.success('Welcome back', { description: 'Successfully signed into Gossip.' });
+        navigate('/dashboard');
+      } else if (!showOTP) {
+        // Step 1: Request Registration
+        await api.post('/api/auth/register-request', data);
+        setShowOTP(true);
+        toast.info('Verification Required', { description: 'Please check your email for the 6-digit code.' });
+      } else {
+        // Step 2: Verify OTP
+        const res = await api.post('/api/auth/register-verify', { ...data, otp: otpValue });
+        login(res.data.user);
+        toast.success('Account Activated', { description: 'Welcome to the Gossip crew.' });
+        navigate('/dashboard');
+      }
     } catch (error) {
       const serverMessage = error.response?.data?.message;
-      const status = error.response?.status;
-      const networkError = error.message;
-
-      toast.error(`Authentication Failed ${status ? `(${status})` : ''}`, {
-        description: serverMessage || (status === 401 ? 'Invalid credentials.' : `Network or Server Error: ${networkError}`),
-      });
+      toast.error('Mission Blocked', { description: serverMessage || 'Registration/Login failed.' });
     }
   };
 
@@ -90,62 +95,91 @@ export function AuthCard() {
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <AnimatePresence mode="wait">
-              {!isLogin && (
+              {showOTP ? (
                 <motion.div
-                  key="username"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-2 overflow-hidden"
+                  key="otp"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="space-y-4 py-4"
                 >
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    placeholder="johndoe"
-                    {...form.register('username')}
-                    className="bg-background/40 border-border/50"
+                  <div className="text-center space-y-2">
+                    <Label className="text-lg font-bold">Enter Verification Code</Label>
+                    <p className="text-xs text-muted-foreground">Sent to {form.getValues('email')}</p>
+                  </div>
+                  <Input 
+                    placeholder="000000" 
+                    value={otpValue}
+                    onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="text-center text-3xl tracking-[0.5em] font-bold h-16 bg-background/40 border-primary/30"
                   />
-                  {form.formState.errors.username && (
-                    <p className="text-xs text-destructive">{form.formState.errors.username.message}</p>
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="w-full text-xs"
+                    onClick={() => setShowOTP(false)}
+                  >
+                    Change Email
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="fields"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-4"
+                >
+                  {!isLogin && (
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Username</Label>
+                      <Input
+                        id="username"
+                        placeholder="johndoe"
+                        {...form.register('username')}
+                        className="bg-background/40 border-border/50"
+                      />
+                      {form.formState.errors.username && (
+                        <p className="text-xs text-destructive">{form.formState.errors.username.message}</p>
+                      )}
+                    </div>
                   )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="name@example.com"
+                      {...form.register('email')}
+                      className="bg-background/40 border-border/50"
+                    />
+                    {form.formState.errors.email && (
+                      <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      {...form.register('password')}
+                      className="bg-background/40 border-border/50"
+                    />
+                    {form.formState.errors.password && (
+                      <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
+                    )}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="name@example.com"
-                {...form.register('email')}
-                className="bg-background/40 border-border/50"
-              />
-              {form.formState.errors.email && (
-                <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                {...form.register('password')}
-                className="bg-background/40 border-border/50"
-              />
-              {form.formState.errors.password && (
-                <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
-              )}
-            </div>
-
             <Button
               type="submit"
               className="w-full !mt-8 transition-all hover:scale-[1.02]"
-              disabled={form.formState.isSubmitting}
+              disabled={form.formState.isSubmitting || (showOTP && otpValue.length !== 6)}
             >
-              {form.formState.isSubmitting ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}
+              {isLogin ? 'Sign In' : (showOTP ? 'Activate Account' : 'Initialize Uplink')}
             </Button>
           </form>
         </CardContent>
@@ -157,11 +191,13 @@ export function AuthCard() {
               type="button"
               onClick={() => {
                 setIsLogin(!isLogin);
+                setShowOTP(false);
+                setOtpValue('');
                 form.reset();
               }}
               className="text-primary font-medium hover:text-primary/80 transition-colors"
             >
-              {isLogin ? 'Sign up' : 'Sign in'}
+              {isLogin ? 'Sign up' : 'Log in'}
             </button>
           </p>
         </CardFooter>
