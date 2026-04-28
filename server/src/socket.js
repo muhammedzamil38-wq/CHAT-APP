@@ -40,12 +40,12 @@ export const initializeSocket = (httpServer) => {
       logMission(`User ${userId} identified on socket ${socket.id}`);
     });
 
-    socket.on("private_message", async ({ to, text, senderId }) => {
+    socket.on("private_message", async ({ to, text, senderId, fileUrl, fileType, fileName }) => {
       try {
         const sId = Number(senderId);
         const rId = Number(to);
-        logMission(`Message from ${sId} to ${rId}: "${text.substring(0, 20)}..."`);
-        const savedMessage = await messageRepository.save(sId, rId, text);
+        logMission(`Message from ${sId} to ${rId}: "${text.substring(0, 20)}..." (Has file: ${!!fileUrl})`);
+        const savedMessage = await messageRepository.save(sId, rId, text, fileUrl, fileType, fileName);
         logMission(`Message saved with ID: ${savedMessage.id}`);
       
         // Emit to the recipient

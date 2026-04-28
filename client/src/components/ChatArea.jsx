@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Send, Smile, Phone, Video, Info, MoreVertical, Copy, Edit2, Trash2, Forward } from 'lucide-react';
+import { Paperclip, Send, Smile, Phone, Video, Info, MoreVertical, Copy, Edit2, Trash2, Forward, FileIcon, Download, X, ImageIcon, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useSocket } from '../contexts/SocketContext';
@@ -17,6 +18,9 @@ export function ChatArea({ selectedUser }) {
   const [forwardContent, setForwardContent] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!socket || !selectedUser) return;
@@ -67,18 +71,55 @@ export function ChatArea({ selectedUser }) {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim() || !socket || !selectedUser) return;
+    if ((!input.trim() && !selectedFile) || !socket || !selectedUser) return;
+
+    let fileData = null;
+
+    if (selectedFile) {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const res = await api.post('/api/files/process', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        fileData = {
+          fileUrl: res.data.media.secure_url,
+          fileType: selectedFile.type,
+          fileName: selectedFile.name
+        };
+        setSelectedFile(null);
+      } catch (error) {
+        toast.error('Failed to upload file');
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
+    }
 
     const messageData = {
       to: selectedUser.id,
-      text: input,
-      senderId: user.id
+      text: input || (fileData ? `Sent a file: ${fileData.fileName}` : ''),
+      senderId: user.id,
+      ...fileData
     };
 
     socket.emit('private_message', messageData);
     setInput('');
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size exceeds 10MB limit');
+        return;
+      }
+      setSelectedFile(file);
+    }
   };
 
   const handleCopy = (text) => {
@@ -195,6 +236,26 @@ export function ChatArea({ selectedUser }) {
                 </div>
               )}
               <div className={`max-w-[75%] rounded-2xl px-4 py-2 mt-1 shadow-sm ${m.senderId === user.id ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border border-border/50 text-card-foreground rounded-tl-sm'}`}>
+                {m.fileUrl && (
+                  <div className="mb-2 overflow-hidden rounded-lg border border-white/10">
+                    {m.fileType?.startsWith('image/') ? (
+                      <img src={m.fileUrl} alt="attachment" className="max-w-full h-auto object-cover max-h-60" />
+                    ) : (
+                      <div className="flex items-center gap-3 p-3 bg-black/20">
+                        <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                          <FileIcon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{m.fileName || 'Document'}</p>
+                          <p className="text-[10px] opacity-60 uppercase">{m.fileType?.split('/')[1] || 'File'}</p>
+                        </div>
+                        <a href={m.fileUrl} target="_blank" rel="noopener noreferrer" download={m.fileName} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                          <Download className="w-4 h-4" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <p className="text-sm leading-relaxed">{m.text}</p>
                 {m.isEdited && <span className="text-[10px] opacity-70 block text-right mt-0.5">(edited)</span>}
               </div>
@@ -226,16 +287,42 @@ export function ChatArea({ selectedUser }) {
           <Button type="button" variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-foreground shrink-0 h-10 w-10">
             <Smile className="w-5 h-5" />
           </Button>
-          <Button type="button" variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-foreground shrink-0 h-10 w-10">
-            <Paperclip className="w-5 h-5" />
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full text-muted-foreground hover:text-foreground shrink-0 h-10 w-10"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+          >
+            {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
           </Button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileSelect} 
+            className="hidden" 
+            accept="image/*,video/*,application/pdf,.doc,.docx,.txt,.zip"
+          />
           <Input 
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message..." 
-            className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 shadow-none h-10 resize-none"
+            placeholder={selectedFile ? `File selected: ${selectedFile.name}` : "Type a message..."} 
+            className={`flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 shadow-none h-10 resize-none ${selectedFile ? 'text-primary font-medium' : ''}`}
             autoComplete="off"
+            disabled={isUploading}
           />
+          {selectedFile && (
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 rounded-full text-destructive"
+              onClick={() => setSelectedFile(null)}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
           <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10 bg-primary/90 hover:bg-primary text-primary-foreground shadow-md transition-transform hover:scale-105 active:scale-95 border-0">
             <Send className="w-4 h-4 ml-0.5" />
           </Button>

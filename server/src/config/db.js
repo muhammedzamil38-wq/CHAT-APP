@@ -45,12 +45,18 @@ export const initializeDatabase = async () => {
       sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       text TEXT NOT NULL,
+      file_url TEXT,
+      file_type VARCHAR(50),
+      file_name VARCHAR(255),
       is_edited BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
   
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT FALSE`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url TEXT`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50)`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)`);
   
   await pool.query(`
     CREATE TABLE IF NOT EXISTS message_visibility (
