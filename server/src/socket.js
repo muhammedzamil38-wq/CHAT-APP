@@ -101,3 +101,9 @@ export const getSocket = () => {
   }
   return io;
 };
+
+export const emitMissionEvent = (event, payload) => {
+  if (io) {
+    io.emit(event, payload);
+  }
+};
