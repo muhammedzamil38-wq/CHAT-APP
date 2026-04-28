@@ -23,6 +23,7 @@ export function ChatArea({ selectedUser }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [editingFile, setEditingFile] = useState(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [filePreview, setFilePreview] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -113,6 +114,7 @@ export function ChatArea({ selectedUser }) {
 
     socket.emit('private_message', messageData);
     setInput('');
+    removeSelectedFile();
   };
 
   const handleFileSelect = (e) => {
@@ -128,14 +130,26 @@ export function ChatArea({ selectedUser }) {
         setShowEditor(true);
       } else {
         setSelectedFile(file);
+        setFilePreview(null); // For non-images, we could show an icon
       }
     }
   };
 
   const handleEditorConfirm = (editedFile) => {
     setSelectedFile(editedFile);
+    if (editedFile.type.startsWith('image/')) {
+      setFilePreview(URL.createObjectURL(editedFile));
+    }
     setShowEditor(false);
     setEditingFile(null);
+  };
+
+  const removeSelectedFile = () => {
+    setSelectedFile(null);
+    if (filePreview) {
+      URL.revokeObjectURL(filePreview);
+      setFilePreview(null);
+    }
   };
 
   const handleCopy = (text) => {
@@ -305,6 +319,32 @@ export function ChatArea({ selectedUser }) {
             <button onClick={() => { setEditingMessage(null); setInput(''); }} className="underline">Cancel</button>
           </div>
         )}
+
+        {/* Selected File Preview Bar */}
+        {selectedFile && (
+          <div className="mb-3 flex items-center gap-3 animate-in slide-in-from-bottom-2 duration-200">
+            <div className="relative group">
+              {filePreview ? (
+                <img src={filePreview} className="w-16 h-16 rounded-xl object-cover border-2 border-primary shadow-lg" alt="Preview" />
+              ) : (
+                <div className="w-16 h-16 rounded-xl bg-card border-2 border-dashed border-primary/50 flex items-center justify-center">
+                  <FileIcon className="w-6 h-6 text-primary" />
+                </div>
+              )}
+              <button 
+                onClick={removeSelectedFile}
+                className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-1 shadow-lg hover:scale-110 transition-transform"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-foreground truncate">{selectedFile.name}</p>
+              <p className="text-[10px] text-muted-foreground uppercase">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB • Ready to send</p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={editingMessage ? submitEdit : handleSend} className="flex items-end gap-2 bg-background/50 border border-border/50 p-2 rounded-2xl focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all shadow-sm">
           <Button type="button" variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-foreground shrink-0 h-10 w-10">
             <Smile className="w-5 h-5" />
