@@ -9,7 +9,7 @@ import { api } from '../lib/api';
 import { ImageEditorModal } from './ImageEditorModal';
 import { EmojiPicker } from './EmojiPicker';
 
-export function ChatArea({ selectedUser }) {
+export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const { socket, onlineUsers, triggerNotification } = useSocket();
@@ -195,7 +195,12 @@ export function ChatArea({ selectedUser }) {
       // It's my message, show options
       setMessageToDelete(msg);
       setShowDeleteModal(true);
-    setPendingFile(null);
+    } else {
+      // It's someone else's message, only allow 'Delete for Me'
+      if (window.confirm('Hide this message from your view?')) {
+        executeDelete(msgId, 'me');
+      }
+    }
   };
 
   const executeDelete = async (msgId, mode) => {
