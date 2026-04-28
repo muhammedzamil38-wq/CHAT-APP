@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Send, Smile, Phone, Video, Info, MoreVertical, Copy, Edit2, Trash2, Forward, FileIcon, Download, X, ImageIcon, Loader2, Check, CheckCheck } from 'lucide-react';
+import { Paperclip, Send, Smile, Phone, Video, Info, MoreVertical, Copy, Edit2, Trash2, Forward, FileIcon, Download, X, ImageIcon, Loader2, Check, CheckCheck, ChevronLeft, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -12,7 +12,7 @@ import { EmojiPicker } from './EmojiPicker';
 export function ChatArea({ selectedUser }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const { socket, onlineUsers } = useSocket();
+  const { socket, onlineUsers, triggerNotification } = useSocket();
   const { user } = useAuth();
   const endRef = useRef(null);
   const [editingMessage, setEditingMessage] = useState(null);
@@ -195,12 +195,7 @@ export function ChatArea({ selectedUser }) {
       // It's my message, show options
       setMessageToDelete(msg);
       setShowDeleteModal(true);
-    } else {
-      // It's someone else's message, only allow 'Delete for Me'
-      if (window.confirm('Hide this message from your view?')) {
-        executeDelete(msgId, 'me');
-      }
-    }
+    setPendingFile(null);
   };
 
   const executeDelete = async (msgId, mode) => {
@@ -209,12 +204,11 @@ export function ChatArea({ selectedUser }) {
       if (mode === 'everyone') {
         socket.emit('message_deleted', res.data);
       } else {
-        // For 'Delete for Me', we still filter out locally
-        setMessages(prev => prev.filter(m => m.id !== msgId));
+        setMessages(prev => prev.filter(m => Number(m.id) !== Number(msgId)));
       }
       setShowDeleteModal(false);
     } catch (error) {
-      toast.error('Failed to delete message');
+      toast.error("Failed to delete message");
     }
   };
 
@@ -222,18 +216,45 @@ export function ChatArea({ selectedUser }) {
     setInput(prev => prev + emoji);
   };
 
-  const handleForward = (text) => {
-    setForwardContent(text);
-    setShowForwardModal(true);
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPendingFile({ file, preview: event.target.result, type: 'image' });
+        setIsEditorOpen(true);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPendingFile({ file, type: 'file' });
+    }
+  };
+
+  const handleEditedImage = (editedBlob) => {
+    const editedFile = new File([editedBlob], pendingFile.file.name, { type: 'image/jpeg' });
+    setPendingFile({
+      file: editedFile,
+      preview: URL.createObjectURL(editedBlob),
+      type: 'image'
+    });
+    setIsEditorOpen(false);
+  };
+
+  const handleForward = (message) => {
+    setForwardingMessage(message);
+    setIsForwardModalOpen(true);
   };
 
   if (!selectedUser) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/5 via-background to-background pointer-events-none" />
-        <div className="text-center z-10">
-          <h2 className="text-2xl font-semibold text-muted-foreground mb-2">Select a crew member</h2>
-          <p className="text-sm text-muted-foreground/60">Choose someone to start a secure mission broadcast.</p>
+      <div className="flex-1 flex items-center justify-center bg-background/50 backdrop-blur-sm text-muted-foreground p-8 text-center">
+        <div className="max-w-xs space-y-4">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto border border-primary/20">
+            <MessageSquare className="w-8 h-8 text-primary/40" />
+          </div>
+          <p className="text-sm font-medium">Uplink established. Select a crew member to start a mission.</p>
         </div>
       </div>
     );
@@ -241,41 +262,47 @@ export function ChatArea({ selectedUser }) {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden">
-      {/* WhatsApp-Style Chat Background */}
       <div className="absolute inset-0 bg-[hsl(var(--chat-bg))]" />
       <div className="absolute inset-0 opacity-[0.05] pointer-events-none mix-blend-overlay" style={{ backgroundImage: `url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')` }} />
 
-      {/* Chat Header */}
-      <div className="h-16 border-b border-border/40 bg-card/40 backdrop-blur-md flex items-center justify-between px-6 shrink-0 relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
+      <div className="h-16 border-b border-border/40 bg-card/40 backdrop-blur-md flex items-center justify-between px-4 md:px-6 shrink-0 relative z-10">
+        <div className="flex items-center gap-2 md:gap-3">
+          {isMobile && (
+            <Button variant="ghost" size="icon" className="h-10 w-10 md:hidden -ml-2" onClick={onBack}>
+              <ChevronLeft className="w-6 h-6" />
+            </Button>
+          )}
+          <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary text-sm">
             {selectedUser.email[0].toUpperCase()}
           </div>
-          <div>
-            <h2 className="font-semibold text-sm">{selectedUser.username || selectedUser.email}</h2>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
+          <div className="min-w-0">
+            <h2 className="font-semibold text-sm truncate max-w-[120px] md:max-w-none">{selectedUser.username || selectedUser.email}</h2>
+            <p className="text-[10px] md:text-xs text-muted-foreground flex items-center gap-1">
               {onlineUsers.includes(String(selectedUser.id)) ? (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 block animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                  <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-500 block animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
                   Online
                 </>
               ) : (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/30 block"></span>
+                  <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-muted-foreground/30 block"></span>
                   Offline
                 </>
               )}
             </p>
           </div>
         </div>
-        <div className="flex gap-2 text-muted-foreground">
-          <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="Voice Call"><Phone className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="Video Call"><Video className="w-5 h-5" /></Button>
+        <div className="flex gap-0 md:gap-2 text-muted-foreground">
+          {!isMobile && (
+            <>
+              <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="Voice Call"><Phone className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="Video Call"><Video className="w-5 h-5" /></Button>
+            </>
+          )}
           <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="User Info"><Info className="w-5 h-5" /></Button>
         </div>
       </div>
 
-      {/* Message List */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4 relative z-10">
         {messages.map((m) => (
           <div key={m.id} className={`flex flex-col group ${m.senderId === user.id ? 'items-end' : 'items-start'}`}>
