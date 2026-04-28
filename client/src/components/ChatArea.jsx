@@ -237,8 +237,9 @@ export function ChatArea({ selectedUser }) {
                 </div>
               )}
               <div className={`max-w-[75%] rounded-2xl px-4 py-2 mt-1 shadow-sm ${m.senderId === user.id ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-card border border-border/50 text-card-foreground rounded-tl-sm'}`}>
+                <p className="text-sm leading-relaxed">{m.text}</p>
                 {m.fileUrl && (
-                  <div className="mb-2 overflow-hidden rounded-lg border border-white/10">
+                  <div className="mt-2 overflow-hidden rounded-lg border border-white/10">
                     {m.fileType?.startsWith('image/') ? (
                       <img src={m.fileUrl} alt="attachment" className="max-w-full h-auto object-cover max-h-60" />
                     ) : (
@@ -257,7 +258,6 @@ export function ChatArea({ selectedUser }) {
                     )}
                   </div>
                 )}
-                <p className="text-sm leading-relaxed">{m.text}</p>
                 {m.isEdited && <span className="text-[10px] opacity-70 block text-right mt-0.5">(edited)</span>}
               </div>
               {m.senderId !== user.id && (
@@ -308,8 +308,8 @@ export function ChatArea({ selectedUser }) {
           <Input 
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={selectedFile ? `File selected: ${selectedFile.name}` : "Type a message..."} 
-            className={`flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 shadow-none h-10 resize-none ${selectedFile ? 'text-primary font-medium' : ''}`}
+            placeholder="Type a message..." 
+            className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 shadow-none h-10 resize-none"
             autoComplete="off"
             disabled={isUploading}
           />
