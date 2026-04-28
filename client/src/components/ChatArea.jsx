@@ -46,7 +46,7 @@ export function ChatArea({ selectedUser }) {
     };
 
     const handleDelete = (updatedMessage) => {
-      setMessages(prev => prev.map(m => m.id === updatedMessage.id ? { ...m, ...updatedMessage } : m));
+      setMessages(prev => prev.map(m => Number(m.id) === Number(updatedMessage.id) ? { ...m, ...updatedMessage } : m));
     };
 
     socket.on('receive_message', handleMessage);
@@ -251,9 +251,9 @@ export function ChatArea({ selectedUser }) {
           </div>
         </div>
         <div className="flex gap-2 text-muted-foreground">
-          <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10"><Phone className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10"><Video className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10"><Info className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="Voice Call"><Phone className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="Video Call"><Video className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="User Info"><Info className="w-5 h-5" /></Button>
         </div>
       </div>
 

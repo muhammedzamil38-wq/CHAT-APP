@@ -43,6 +43,6 @@ export const messageController = {
     }
     
     console.log(`[DELETE-SUCCESS] Message ${id} purged for everyone.`);
-    res.status(200).json({ message: "Message purged for everyone", id: deleted.id, to: deleted.to, senderId: deleted.senderId, mode: 'everyone' });
+    res.status(200).json({ ...deleted, mode: 'everyone' });
   }
 };

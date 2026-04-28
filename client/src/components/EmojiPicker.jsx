@@ -13,7 +13,7 @@ export function EmojiPicker({ onEmojiSelect, onClose }) {
       {/* Header */}
       <div className="p-3 border-b border-border/50 flex items-center justify-between bg-white/5">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Select Emoji</span>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+        <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
           <span className="text-xl">×</span>
         </button>
       </div>
@@ -27,6 +27,7 @@ export function EmojiPicker({ onEmojiSelect, onClose }) {
               {cat.emojis.map((emoji, idx) => (
                 <button
                   key={`${cat.name}-${idx}`}
+                  type="button"
                   onClick={() => onEmojiSelect(emoji)}
                   className="w-10 h-10 flex items-center justify-center text-xl hover:bg-white/10 rounded-lg transition-all hover:scale-125 active:scale-95"
                 >

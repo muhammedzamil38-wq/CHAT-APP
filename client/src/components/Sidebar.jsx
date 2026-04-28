@@ -105,10 +105,11 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
             size="icon" 
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={onOpenSettings}
+            title="Mission Settings"
           >
             <Settings className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="More Options">
             <MoreVertical className="h-4 w-4" />
           </Button>
         </div>
@@ -147,6 +148,7 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
                     className="h-8 w-8 shrink-0"
                     onClick={() => !isAlreadyFriend && handleAddFriend(user.id)}
                     disabled={isAlreadyFriend}
+                    title={isAlreadyFriend ? "Already in Contacts" : "Add Crew Member"}
                   >
                     {isAlreadyFriend ? <Check className="h-4 w-4 text-emerald-500" /> : <UserPlus className="h-4 w-4" />}
                   </Button>
