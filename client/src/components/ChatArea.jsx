@@ -280,7 +280,7 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                 px-4 py-2 rounded-2xl text-sm shadow-sm relative group border
                 ${m.senderId === user.id 
                   ? 'bg-primary text-primary-foreground rounded-tr-none border-primary/20' 
-                  : 'bg-[#2a2a2a] text-foreground rounded-tl-none border-white/5'}
+                  : 'bg-secondary/60 dark:bg-[#2a2a2a] text-foreground rounded-tl-none border-border/40 dark:border-white/5'}
                 ${m.isDeleted ? 'opacity-50 italic' : ''}
               `}>
                 {m.fileUrl && !m.isDeleted && (
