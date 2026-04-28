@@ -6,10 +6,10 @@ export const messageController = {
     const myId = Number(req.user.id);
     const otherId = Number(userId);
     
-    const history = await messageRepository.getConversation(myId, otherId);
-    console.log(`[HISTORY-DEBUG] Fetching history between ${myId} and ${otherId}. Found ${history.length} messages.`);
+    const messages = await messageRepository.getConversation(myId, otherId);
+    console.log(`[HISTORY-DEBUG] Fetching history between ${myId} and ${otherId}. Found ${messages.length} messages.`);
     
-    res.status(200).json({ history });
+    res.status(200).json({ messages });
   },
 
   updateMessage: async (req, res) => {
