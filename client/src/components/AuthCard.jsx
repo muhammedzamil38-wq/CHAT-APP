@@ -5,9 +5,10 @@ import * as z from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Sun, Moon } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -32,6 +33,7 @@ export function AuthCard() {
   });
 
   const { login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const onSubmit = async (data) => {
     try {
@@ -63,7 +65,19 @@ export function AuthCard() {
       className="w-full max-w-md mx-auto"
     >
       <Card className="glass relative overflow-hidden shadow-2xl border-border/40">
-        <CardHeader className="text-center pb-6 pt-8">
+        <CardHeader className="text-center pb-6 pt-8 relative">
+          <div className="absolute top-4 right-4">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full h-10 w-10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </Button>
+          </div>
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 border border-primary/20">
             <MessageSquare className="w-6 h-6 text-primary" />
           </div>
