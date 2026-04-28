@@ -4,6 +4,7 @@ import { logMission } from "./utils/logger.js";
 import { messageRepository } from "./repositories/messageRepository.js";
 
 let io;
+const userSocketMap = {}; // {userId: socketId}
 
 export const initializeSocket = (httpServer) => {
   io = new Server(httpServer, {
@@ -34,10 +35,13 @@ export const initializeSocket = (httpServer) => {
   io.on("connection", (socket) => {
     logMission(`Socket uplink established: ${socket.id}`);
 
-    // Join a room specific to the user ID
+    // Join a room specific to the user ID and track online status
     socket.on("identify", (userId) => {
+      if (!userId) return;
       socket.join(`user_${userId}`);
-      logMission(`User ${userId} identified on socket ${socket.id}`);
+      userSocketMap[userId] = socket.id;
+      io.emit("getOnlineUsers", Object.keys(userSocketMap));
+      logMission(`User ${userId} identified on socket ${socket.id}. Total online: ${Object.keys(userSocketMap).length}`);
     });
 
     socket.on("private_message", async ({ to, text, senderId, fileUrl, fileType, fileName }) => {
@@ -69,6 +73,14 @@ export const initializeSocket = (httpServer) => {
 
     socket.on("disconnect", () => {
       logMission(`Socket uplink closed: ${socket.id}`);
+      // Find and remove the user from our online map
+      for (const [userId, socketId] of Object.entries(userSocketMap)) {
+        if (socketId === socket.id) {
+          delete userSocketMap[userId];
+          break;
+        }
+      }
+      io.emit("getOnlineUsers", Object.keys(userSocketMap));
     });
   });
 

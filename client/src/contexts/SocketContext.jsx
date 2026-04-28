@@ -6,11 +6,11 @@ const SocketContext = createContext();
 
 export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
+  const [onlineUsers, setOnlineUsers] = useState([]);
   const { user } = useAuth();
 
   useEffect(() => {
     if (user) {
-      // Prioritize VITE_API_URL if it exists, otherwise fall back to dynamic detection
       const apiBase = import.meta.env.VITE_API_URL;
       const socketUrl = apiBase || 
         (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -27,16 +27,24 @@ export function SocketProvider({ children }) {
         newSocket.emit('identify', user.id);
       });
 
+      newSocket.on('getOnlineUsers', (users) => {
+        setOnlineUsers(users);
+      });
+
       setSocket(newSocket);
 
-      return () => newSocket.close();
+      return () => {
+        newSocket.off('getOnlineUsers');
+        newSocket.close();
+      };
     } else {
       setSocket(null);
+      setOnlineUsers([]);
     }
   }, [user]);
 
   return (
-    <SocketContext.Provider value={socket}>
+    <SocketContext.Provider value={{ socket, onlineUsers }}>
       {children}
     </SocketContext.Provider>
   );

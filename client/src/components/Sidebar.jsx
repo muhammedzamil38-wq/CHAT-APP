@@ -11,7 +11,7 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const socket = useSocket();
+  const { socket, onlineUsers } = useSocket();
 
   const fetchFriends = async () => {
     try {
@@ -177,6 +177,9 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
             >
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary shrink-0 relative">
                 {contact.avatar}
+                {onlineUsers.includes(String(contact.id)) && (
+                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-card rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse"></span>
+                )}
               </div>
               <div className="flex-1 min-w-0 text-left">
                 <div className="flex items-center justify-between">

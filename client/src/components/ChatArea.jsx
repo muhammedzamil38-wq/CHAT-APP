@@ -12,7 +12,7 @@ import { EmojiPicker } from './EmojiPicker';
 export function ChatArea({ selectedUser }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const socket = useSocket();
+  const { socket, onlineUsers } = useSocket();
   const { user } = useAuth();
   const endRef = useRef(null);
   const [editingMessage, setEditingMessage] = useState(null);
@@ -245,8 +245,17 @@ export function ChatArea({ selectedUser }) {
           <div>
             <h2 className="font-semibold text-sm">{selectedUser.username || selectedUser.email}</h2>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 block"></span>
-              Online
+              {onlineUsers.includes(String(selectedUser.id)) ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 block animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                  Online
+                </>
+              ) : (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/30 block"></span>
+                  Offline
+                </>
+              )}
             </p>
           </div>
         </div>
