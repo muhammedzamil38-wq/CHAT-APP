@@ -28,8 +28,10 @@ export function SettingsModal({ isOpen, onClose }) {
       const formData = new FormData();
       formData.append('file', file);
       
-      const uploadRes = await api.post('/api/files/upload', formData);
-      const avatarUrl = uploadRes.data.url;
+      const uploadRes = await api.post('/api/files/process', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const avatarUrl = uploadRes.data.media.secure_url;
       
       const res = await api.put('/api/users/profile', { avatarUrl });
       login(res.data.user);
