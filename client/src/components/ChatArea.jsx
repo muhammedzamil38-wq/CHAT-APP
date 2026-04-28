@@ -263,8 +263,10 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
           <div key={m.id} className={`flex flex-col group ${m.senderId === user.id ? 'items-end' : 'items-start'}`}>
             <div className="max-w-[85%] md:max-w-[70%] relative">
               <div className={`
-                px-4 py-2 rounded-2xl text-sm shadow-sm relative group
-                ${m.senderId === user.id ? 'bg-primary text-primary-foreground rounded-tr-none' : 'bg-card text-foreground rounded-tl-none'}
+                px-4 py-2 rounded-2xl text-sm shadow-sm relative group border
+                ${m.senderId === user.id 
+                  ? 'bg-primary text-primary-foreground rounded-tr-none border-primary/20' 
+                  : 'bg-[#2a2a2a] text-foreground rounded-tl-none border-white/5'}
                 ${m.isDeleted ? 'opacity-50 italic' : ''}
               `}>
                 {m.fileUrl && !m.isDeleted && (
@@ -281,22 +283,30 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                   </div>
                 )}
                 <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
-                <div className="flex items-center justify-end gap-1 mt-1 opacity-70">
+                <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
                   <span className="text-[10px]">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   {m.senderId === user.id && (
                     <CheckCheck className={`w-3 h-3 ${onlineUsers.includes(String(selectedUser.id)) ? 'text-blue-400' : ''}`} />
                   )}
                 </div>
 
-                {/* Message Actions */}
+                {/* Message Actions - Now with Frosted Glass and High Contrast */}
                 {!m.isDeleted && (
                   <div className={`
-                    absolute top-0 flex gap-1 p-1 bg-background/80 backdrop-blur-md rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-20
-                    ${m.senderId === user.id ? 'right-full mr-2' : 'left-full ml-2'}
+                    absolute top-0 flex gap-1 p-1 bg-white/10 dark:bg-black/60 backdrop-blur-xl rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 border border-white/20
+                    ${m.senderId === user.id ? 'right-full mr-3' : 'left-full ml-3'}
                   `}>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => navigator.clipboard.writeText(m.text)} title="Copy"><Copy className="w-3 h-3" /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-destructive hover:text-destructive" onClick={() => handleDeleteMsg(m)} title="Delete"><Trash2 className="w-3 h-3" /></Button>
-                    {m.senderId === user.id && <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => startEdit(m)} title="Edit"><Edit2 className="w-3 h-3" /></Button>}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/20 text-foreground" onClick={() => navigator.clipboard.writeText(m.text)} title="Copy">
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/20 text-destructive" onClick={() => handleDeleteMsg(m)} title="Delete">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                    {m.senderId === user.id && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/20 text-foreground" onClick={() => startEdit(m)} title="Edit">
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
