@@ -53,12 +53,26 @@ export function SocketProvider({ children }) {
     // Play sound
     notificationSound.play().catch(e => console.log('Audio playback blocked by browser policy'));
 
-    // Show Notification if permission granted and tab hidden
+    // Show Notification
     if (Notification.permission === 'granted') {
-      new Notification(senderName, {
-        body: messageText,
-        icon: '/favicon.ico', // You can replace with app logo
-      });
+      // Try to use Service Worker for more "Native PC" feel if available
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(senderName, {
+            body: messageText,
+            icon: '/logo192.png',
+            badge: '/logo192.png',
+            tag: 'gossip-msg', // Prevents flooding
+            renotify: true
+          });
+        });
+      } else {
+        // Fallback to standard notification
+        new Notification(senderName, {
+          body: messageText,
+          icon: '/logo192.png',
+        });
+      }
     }
   };
 
