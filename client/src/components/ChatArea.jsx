@@ -159,6 +159,10 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
     }
   };
 
+  const handleEmojiSelect = (emoji) => {
+    setInput(prev => prev + emoji);
+  };
+
   const handleDeleteMsg = (msg) => {
     if (Number(msg.senderId) === Number(user?.id)) {
       if (window.confirm('Delete this message for everyone?')) {
