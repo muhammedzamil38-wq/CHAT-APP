@@ -11,6 +11,7 @@ export const fileController = {
       throw new AppError("[MISSION-CONTROL] No file payload received.", 400);
     }
 
+    console.log(`[FILE-DEBUG] Processing upload for user ${req.user.id}: ${req.file.originalname} (${req.file.size} bytes)`);
     const media = await fileService.processUpload(req.user.id, req.file);
 
     res.status(201).json({

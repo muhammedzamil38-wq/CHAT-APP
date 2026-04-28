@@ -93,6 +93,7 @@ export function ChatArea({ selectedUser }) {
         };
         setSelectedFile(null);
       } catch (error) {
+        console.error('[UPLOAD-ERROR]', error);
         toast.error('Failed to upload file');
         setIsUploading(false);
         return;
@@ -114,8 +115,8 @@ export function ChatArea({ selectedUser }) {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('File size exceeds 10MB limit');
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('File size exceeds 50MB limit');
         return;
       }
       setSelectedFile(file);
