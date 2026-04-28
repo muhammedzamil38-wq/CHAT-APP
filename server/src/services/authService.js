@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { transporter } from "../config/mailer.js";
 import { env } from "../config/env.js";
 import { userRepository } from "../repositories/userRepository.js";
 import { AppError } from "../utils/errors.js";
@@ -11,55 +10,43 @@ const signToken = (userId) =>
   });
 
 export const authService = {
-  register: async (email, password, username) => {
-    const existingUser = await userRepository.findByEmail(email);
-    if (existingUser) {
-      throw new AppError("[MISSION-CONTROL] Registration halted: email already in orbit.", 409);
-    }
+  // Check if credentials are correct without issuing a token
+  verifyCredentials: async (email, password) => {
+    const user = await userRepository.findByEmail(email);
+    if (!user) return null;
 
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    return isMatch ? user : null;
+  },
+
+  register: async (email, password, username) => {
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await userRepository.create(email, passwordHash, username);
 
-    try {
-      await transporter.sendMail({
-        from: env.emailUser,
-        to: user.email,
-        subject: "GOSSIP Mission Control: Account Initialized",
-        text: "Astronaut, your communication node is now active."
-      });
-    } catch (error) {
-      console.error("[MISSION-CONTROL][ALERT] Welcome email failed to send:", error.message);
-    }
-
     return {
       token: signToken(user.id),
-      user: { id: user.id, email: user.email }
+      user: { id: user.id, email: user.email, username: user.username }
     };
   },
 
   login: async (email, password) => {
     const user = await userRepository.findByEmail(email);
-    if (!user) {
-      throw new AppError("[MISSION-CONTROL] Login denied: unknown crew member.", 401);
-    }
+    // Note: We already verified credentials in verifyCredentials before sending OTP
+    // but we do it again here as a final safety check before issuing token.
+    if (!user) throw new AppError("User not found.", 404);
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      throw new AppError("[MISSION-CONTROL] Login denied: invalid credential vector.", 401);
-    }
+    if (!isMatch) throw new AppError("Invalid credentials.", 401);
 
     return {
       token: signToken(user.id),
-      user: { id: user.id, email: user.email }
+      user: { id: user.id, email: user.email, username: user.username }
     };
   },
 
   getCurrentUser: async (userId) => {
     const user = await userRepository.findById(userId);
-    if (!user) {
-      throw new AppError("[MISSION-CONTROL] User profile missing from telemetry.", 404);
-    }
-
+    if (!user) throw new AppError("User not found.", 404);
     return user;
   },
 

@@ -40,17 +40,25 @@ export function AuthCard() {
   const onSubmit = async (data) => {
     try {
       if (isLogin) {
-        const res = await api.post('/api/auth/login', data);
-        login(res.data.user);
-        toast.success('Welcome back', { description: 'Successfully signed into Gossip.' });
-        navigate('/dashboard');
+        if (!showOTP) {
+          // Step 1: Request Login (2FA)
+          await api.post('/api/auth/login-request', data);
+          setShowOTP(true);
+          toast.info('2FA Required', { description: 'Please check your email for the login code.' });
+        } else {
+          // Step 2: Verify Login OTP
+          const res = await api.post('/api/auth/login-verify', { ...data, otp: otpValue });
+          login(res.data.user);
+          toast.success('Welcome back', { description: 'Successfully signed into Gossip.' });
+          navigate('/dashboard');
+        }
       } else if (!showOTP) {
         // Step 1: Request Registration
         await api.post('/api/auth/register-request', data);
         setShowOTP(true);
         toast.info('Verification Required', { description: 'Please check your email for the 6-digit code.' });
       } else {
-        // Step 2: Verify OTP
+        // Step 2: Verify Registration OTP
         const res = await api.post('/api/auth/register-verify', { ...data, otp: otpValue });
         login(res.data.user);
         toast.success('Account Activated', { description: 'Welcome to the Gossip crew.' });
@@ -58,7 +66,7 @@ export function AuthCard() {
       }
     } catch (error) {
       const serverMessage = error.response?.data?.message;
-      toast.error('Mission Blocked', { description: serverMessage || 'Registration/Login failed.' });
+      toast.error('Mission Blocked', { description: serverMessage || 'Authentication failed.' });
     }
   };
 
@@ -179,7 +187,7 @@ export function AuthCard() {
               className="w-full !mt-8 transition-all hover:scale-[1.02]"
               disabled={form.formState.isSubmitting || (showOTP && otpValue.length !== 6)}
             >
-              {isLogin ? 'Sign In' : (showOTP ? 'Activate Account' : 'Initialize Uplink')}
+              {isLogin ? (showOTP ? 'Verify Login' : 'Sign In') : (showOTP ? 'Activate Account' : 'Initialize Uplink')}
             </Button>
           </form>
         </CardContent>
