@@ -6,7 +6,6 @@ export const userController = {
     if (!req.user) {
       throw new AppError("[MISSION-CONTROL] Authentication context not available.", 401);
     }
-
     const users = await userRepository.findFriends(req.user.id);
     res.status(200).json({ users });
   },
@@ -21,5 +20,18 @@ export const userController = {
     const { friendId } = req.body;
     await userRepository.addFriend(req.user.id, friendId);
     res.status(200).json({ message: "Crew member added to your roster." });
+  },
+
+  updateProfile: async (req, res) => {
+    const { username, bio, avatarUrl } = req.body;
+    const user = await userRepository.updateProfile(req.user.id, { username, bio, avatarUrl });
+    res.status(200).json({ user, message: "Mission identity updated." });
+  },
+
+  getProfile: async (req, res) => {
+    const { id } = req.params;
+    const user = await userRepository.findById(Number(id));
+    if (!user) throw new AppError("Crew member not found.", 404);
+    res.status(200).json({ user });
   }
 };

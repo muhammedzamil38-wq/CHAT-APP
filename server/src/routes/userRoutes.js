@@ -7,5 +7,7 @@ const router = Router();
 router.get("/", authenticate, userController.getUsers);
 router.get("/search", authenticate, userController.searchUsers);
 router.post("/add", authenticate, userController.addFriend);
+router.put("/profile", authenticate, userController.updateProfile);
+router.get("/profile/:id", authenticate, userController.getProfile);
 
 export default router;

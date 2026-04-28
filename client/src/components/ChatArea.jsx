@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import { ImageEditorModal } from './ImageEditorModal';
 import { EmojiPicker } from './EmojiPicker';
+import { UserInfoModal } from './UserInfoModal';
 
 export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [messages, setMessages] = useState([]);
@@ -21,6 +22,7 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   const endRef = useRef(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showUserInfo, setShowUserInfo] = useState(false);
   const fileInputRef = useRef(null);
   
   // File states
@@ -253,7 +255,15 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
               <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="Video Call"><Video className="w-5 h-5" /></Button>
             </>
           )}
-          <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="User Info"><Info className="w-5 h-5" /></Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hover:text-foreground rounded-full hover:bg-white/10" 
+            title="User Info"
+            onClick={() => setShowUserInfo(true)}
+          >
+            <Info className="w-5 h-5" />
+          </Button>
         </div>
       </div>
 
@@ -373,6 +383,12 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
           onCancel={() => setIsEditorOpen(false)} 
         />
       )}
+
+      <UserInfoModal 
+        user={selectedUser} 
+        isOpen={showUserInfo} 
+        onClose={() => setShowUserInfo(false)} 
+      />
     </div>
   );
 }

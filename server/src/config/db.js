@@ -14,9 +14,14 @@ export const initializeDatabase = async () => {
       username VARCHAR(255),
       email VARCHAR(255) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
+      bio TEXT,
+      avatar_url TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+  
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS media_assets (
