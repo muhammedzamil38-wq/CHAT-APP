@@ -4,7 +4,7 @@ import { logMission } from "./utils/logger.js";
 import { messageRepository } from "./repositories/messageRepository.js";
 
 let io;
-const userSocketMap = {}; // {userId: socketId}
+const userSocketMap = {}; // {userId: Set(socketIds)}
 
 export const initializeSocket = (httpServer) => {
   io = new Server(httpServer, {
@@ -25,12 +25,15 @@ export const initializeSocket = (httpServer) => {
         if (isAllowed) {
           callback(null, true);
         } else {
-          callback(new Error(`Socket CORS Error: Origin ${origin} unauthorized.`));
+          callback(new Error("Not allowed by CORS"));
         }
       },
+      methods: ["GET", "POST"],
       credentials: true
     }
   });
+
+  const getOnlineUserIds = () => Object.keys(userSocketMap);
 
   io.on("connection", (socket) => {
     logMission(`Socket uplink established: ${socket.id}`);
@@ -38,23 +41,25 @@ export const initializeSocket = (httpServer) => {
     // Join a room specific to the user ID and track online status
     socket.on("identify", (userId) => {
       if (!userId) return;
-      socket.join(`user_${userId}`);
-      userSocketMap[userId] = socket.id;
-      io.emit("getOnlineUsers", Object.keys(userSocketMap));
-      logMission(`User ${userId} identified on socket ${socket.id}. Total online: ${Object.keys(userSocketMap).length}`);
+      const uid = String(userId);
+      socket.join(`user_${uid}`);
+      
+      if (!userSocketMap[uid]) {
+        userSocketMap[uid] = new Set();
+      }
+      userSocketMap[uid].add(socket.id);
+      
+      // Broadcast to everyone
+      io.emit("getOnlineUsers", getOnlineUserIds());
+      logMission(`User ${uid} identified. Total online: ${getOnlineUserIds().length}`);
     });
 
     socket.on("private_message", async ({ to, text, senderId, fileUrl, fileType, fileName }) => {
       try {
         const sId = Number(senderId);
         const rId = Number(to);
-        logMission(`Message from ${sId} to ${rId}: "${text.substring(0, 20)}..." (Has file: ${!!fileUrl})`);
         const savedMessage = await messageRepository.save(sId, rId, text, fileUrl, fileType, fileName);
-        logMission(`Message saved with ID: ${savedMessage.id}`);
-      
-        // Emit to the recipient
         io.to(`user_${to}`).emit("receive_message", savedMessage);
-        // Also emit back to the sender (for multi-device sync or just confirmation)
         io.to(`user_${senderId}`).emit("receive_message", savedMessage);
     } catch (error) {
       console.error("[MISSION-CONTROL][SOCKET-ERROR] Failed to save/emit message:", error.message);
@@ -73,14 +78,17 @@ export const initializeSocket = (httpServer) => {
 
     socket.on("disconnect", () => {
       logMission(`Socket uplink closed: ${socket.id}`);
-      // Find and remove the user from our online map
-      for (const [userId, socketId] of Object.entries(userSocketMap)) {
-        if (socketId === socket.id) {
-          delete userSocketMap[userId];
+      
+      for (const [uid, sockets] of Object.entries(userSocketMap)) {
+        if (sockets.has(socket.id)) {
+          sockets.delete(socket.id);
+          if (sockets.size === 0) {
+            delete userSocketMap[uid];
+          }
           break;
         }
       }
-      io.emit("getOnlineUsers", Object.keys(userSocketMap));
+      io.emit("getOnlineUsers", getOnlineUserIds());
     });
   });
 
@@ -92,8 +100,4 @@ export const getSocket = () => {
     throw new Error("[MISSION-CONTROL] Socket subsystem not initialized.");
   }
   return io;
-};
-
-export const emitMissionEvent = (event, payload) => {
-  getSocket().emit(event, payload);
 };

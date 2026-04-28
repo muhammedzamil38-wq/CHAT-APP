@@ -23,11 +23,12 @@ export function SocketProvider({ children }) {
       });
 
       newSocket.on('connect', () => {
-        console.log('Socket connected');
-        newSocket.emit('identify', user.id);
+        console.log('[SOCKET] Connection established');
+        newSocket.emit('identify', String(user.id));
       });
 
       newSocket.on('getOnlineUsers', (users) => {
+        console.log('[SOCKET] Online users updated:', users);
         setOnlineUsers(users);
       });
 
