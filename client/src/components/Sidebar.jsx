@@ -16,7 +16,8 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
   const fetchFriends = async () => {
     try {
       const res = await api.get('/api/users');
-      setContacts(res.data.users.map(u => ({
+      const users = res.data?.users || [];
+      setContacts(users.map(u => ({
         ...u,
         avatar: (u.username || u.email)[0].toUpperCase(),
         lastMessage: 'Secure link active',

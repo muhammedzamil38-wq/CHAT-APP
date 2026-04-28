@@ -76,7 +76,7 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
     const fetchMessages = async () => {
       try {
         const res = await api.get(`/api/messages/${selectedUser.id}`);
-        setMessages(res.data.messages);
+        setMessages(res.data?.messages || []);
       } catch (error) {
         console.error('Failed to fetch messages', error);
       }
