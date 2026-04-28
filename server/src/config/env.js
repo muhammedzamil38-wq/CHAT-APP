@@ -4,7 +4,10 @@ dotenv.config();
 
 const requiredKeys = [
   "DATABASE_URL",
-  "JWT_SECRET"
+  "JWT_SECRET",
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET"
 ];
 
 for (const key of requiredKeys) {
