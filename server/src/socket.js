@@ -62,9 +62,9 @@ export const initializeSocket = (httpServer) => {
       io.to(`user_${message.senderId}`).emit("message_edited", message);
     });
 
-    socket.on("message_deleted", ({ id, to, senderId }) => {
-      io.to(`user_${to}`).emit("message_deleted", { id });
-      io.to(`user_${senderId}`).emit("message_deleted", { id });
+    socket.on("message_deleted", (updatedMessage) => {
+      io.to(`user_${updatedMessage.to}`).emit("message_deleted", updatedMessage);
+      io.to(`user_${updatedMessage.senderId}`).emit("message_deleted", updatedMessage);
     });
 
     socket.on("disconnect", () => {

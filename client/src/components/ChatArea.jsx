@@ -45,8 +45,8 @@ export function ChatArea({ selectedUser }) {
       setMessages(prev => prev.map(m => m.id === editedMessage.id ? editedMessage : m));
     };
 
-    const handleDelete = ({ id }) => {
-      setMessages(prev => prev.filter(m => m.id !== id));
+    const handleDelete = (updatedMessage) => {
+      setMessages(prev => prev.map(m => m.id === updatedMessage.id ? { ...m, ...updatedMessage } : m));
     };
 
     socket.on('receive_message', handleMessage);
@@ -200,7 +200,7 @@ export function ChatArea({ selectedUser }) {
       if (mode === 'everyone') {
         socket.emit('message_deleted', res.data);
       } else {
-        // Just remove from local state
+        // For 'Delete for Me', we still filter out locally
         setMessages(prev => prev.filter(m => m.id !== msgId));
       }
       setShowDeleteModal(false);
@@ -262,19 +262,21 @@ export function ChatArea({ selectedUser }) {
         {messages.map((m) => (
           <div key={m.id} className={`flex flex-col group ${m.senderId === user.id ? 'items-end' : 'items-start'}`}>
             <div className="flex items-center gap-2 group">
-              {m.senderId === user.id && (
+              {m.senderId === user.id && !m.isDeleted && (
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleCopy(m.text)}><Copy className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleCopy(m.text)} title="Copy Message"><Copy className="w-4 h-4" /></Button>
                   {(new Date() - new Date(m.createdAt) < 10 * 60 * 1000) && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => startEdit(m)}><Edit2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => startEdit(m)} title="Edit Message"><Edit2 className="w-4 h-4" /></Button>
                   )}
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive" onClick={() => handleDeleteMsg(m.id)}><Trash2 className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleForward(m.text)}><Forward className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive" onClick={() => handleDeleteMsg(m.id)} title="Delete Message"><Trash2 className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleForward(m.text)} title="Forward Message"><Forward className="w-4 h-4" /></Button>
                 </div>
               )}
-              <div className={`max-w-[75%] rounded-2xl px-3 py-1.5 mt-1 shadow-sm relative ${m.senderId === user.id ? 'bg-[hsl(var(--sender-bubble))] text-[hsl(var(--bubble-text))] rounded-tr-none' : 'bg-[hsl(var(--recipient-bubble))] text-[hsl(var(--bubble-text))] rounded-tl-none border border-border/50'}`}>
-                <p className="text-[14.2px] leading-relaxed pr-10">{m.text}</p>
-                {m.fileUrl && (
+              <div className={`max-w-[75%] rounded-2xl px-3 py-1.5 mt-1 shadow-sm relative ${m.senderId === user.id ? 'bg-[hsl(var(--sender-bubble))] text-[hsl(var(--bubble-text))] rounded-tr-none' : 'bg-[hsl(var(--recipient-bubble))] text-[hsl(var(--bubble-text))] rounded-tl-none border border-border/50'} ${m.isDeleted ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                <p className={`text-[14.2px] leading-relaxed pr-10 ${m.isDeleted ? 'italic text-muted-foreground' : ''}`}>
+                  {m.text}
+                </p>
+                {!m.isDeleted && m.fileUrl && (
                   <div className="mt-1.5 overflow-hidden rounded-lg border border-white/10">
                     {m.fileType?.startsWith('image/') ? (
                       <img src={m.fileUrl} alt="attachment" className="max-w-full h-auto object-cover max-h-60" />
@@ -287,7 +289,7 @@ export function ChatArea({ selectedUser }) {
                           <p className="text-xs font-medium truncate">{m.fileName || 'Document'}</p>
                           <p className="text-[10px] opacity-60 uppercase">{m.fileType?.split('/')[1] || 'File'}</p>
                         </div>
-                        <a href={m.fileUrl} target="_blank" rel="noopener noreferrer" download={m.fileName} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <a href={m.fileUrl} target="_blank" rel="noopener noreferrer" download={m.fileName} className="p-2 hover:bg-white/10 rounded-full transition-colors" title="Download File">
                           <Download className="w-4 h-4" />
                         </a>
                       </div>
@@ -295,20 +297,20 @@ export function ChatArea({ selectedUser }) {
                   </div>
                 )}
                 <div className="flex items-center justify-end gap-1 mt-0.5">
-                  {m.isEdited && <span className="text-[10px] opacity-50">(edited)</span>}
+                  {m.isEdited && !m.isDeleted && <span className="text-[10px] opacity-50">(edited)</span>}
                   <span className="text-[10px] opacity-60 uppercase">
                     {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                   </span>
-                  {m.senderId === user.id && (
+                  {m.senderId === user.id && !m.isDeleted && (
                     <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
                   )}
                 </div>
               </div>
-              {m.senderId !== user.id && (
+              {m.senderId !== user.id && !m.isDeleted && (
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleCopy(m.text)}><Copy className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleForward(m.text)}><Forward className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive" onClick={() => handleDeleteMsg(m.id)}><Trash2 className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleCopy(m.text)} title="Copy Message"><Copy className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleForward(m.text)} title="Forward Message"><Forward className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive" onClick={() => handleDeleteMsg(m.id)} title="Delete for Me"><Trash2 className="w-4 h-4" /></Button>
                 </div>
               )}
             </div>
@@ -364,6 +366,7 @@ export function ChatArea({ selectedUser }) {
             size="icon" 
             className={`rounded-full shrink-0 h-10 w-10 ${showEmojiPicker ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'}`}
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            title="Emojis"
           >
             <Smile className="w-5 h-5" />
           </Button>
@@ -374,6 +377,7 @@ export function ChatArea({ selectedUser }) {
             className="rounded-full text-muted-foreground hover:text-foreground shrink-0 h-10 w-10"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
+            title="Attach Files"
           >
             {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
           </Button>
@@ -403,7 +407,12 @@ export function ChatArea({ selectedUser }) {
               <X className="w-4 h-4" />
             </Button>
           )}
-          <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10 bg-primary/90 hover:bg-primary text-primary-foreground shadow-md transition-transform hover:scale-105 active:scale-95 border-0">
+          <Button 
+            type="submit" 
+            size="icon" 
+            className="rounded-full shrink-0 h-10 w-10 bg-primary/90 hover:bg-primary text-primary-foreground shadow-md transition-transform hover:scale-105 active:scale-95 border-0"
+            title="Send Message"
+          >
             <Send className="w-4 h-4 ml-0.5" />
           </Button>
         </form>

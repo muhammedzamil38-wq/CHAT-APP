@@ -49,6 +49,7 @@ export const initializeDatabase = async () => {
       file_type VARCHAR(50),
       file_name VARCHAR(255),
       is_edited BOOLEAN DEFAULT FALSE,
+      is_deleted BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
@@ -57,6 +58,7 @@ export const initializeDatabase = async () => {
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url TEXT`);
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50)`);
   await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`);
   
   await pool.query(`
     CREATE TABLE IF NOT EXISTS message_visibility (
