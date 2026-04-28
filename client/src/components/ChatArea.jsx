@@ -228,8 +228,12 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
               <ChevronLeft className="w-6 h-6" />
             </Button>
           )}
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary text-sm">
-            {selectedUser.email[0].toUpperCase()}
+          <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-semibold text-primary text-sm overflow-hidden">
+            {selectedUser.avatarUrl ? (
+              <img src={selectedUser.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              selectedUser.email[0].toUpperCase()
+            )}
           </div>
           <div className="min-w-0">
             <h2 className="font-semibold text-sm truncate max-w-[120px] md:max-w-none">{selectedUser.username || selectedUser.email}</h2>

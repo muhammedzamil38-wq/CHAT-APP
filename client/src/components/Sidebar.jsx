@@ -141,8 +141,12 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
               return (
                 <div key={user.id} className="flex items-center justify-between p-3 hover:bg-white/5 transition-colors border-b border-border/10 last:border-0">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                      {(user.username || user.email)[0].toUpperCase()}
+                    <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0 overflow-hidden">
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        (user.username || user.email)[0].toUpperCase()
+                      )}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{user.username || user.email}</p>
@@ -182,10 +186,14 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
               onClick={() => onSelectUser(contact)}
               className={`flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-border/10 ${selectedUser?.id === contact.id ? 'bg-white/5' : ''}`}
             >
-              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary shrink-0 relative">
-                {contact.avatar}
+              <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-semibold text-primary shrink-0 relative overflow-hidden">
+                {contact.avatarUrl ? (
+                  <img src={contact.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  contact.avatar
+                )}
                 {onlineUsers.includes(String(contact.id)) && (
-                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-card rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse"></span>
+                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-card rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse z-10"></span>
                 )}
               </div>
               <div className="flex-1 min-w-0 text-left">
