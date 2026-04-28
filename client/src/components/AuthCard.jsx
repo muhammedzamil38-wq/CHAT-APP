@@ -37,9 +37,9 @@ export function AuthCard() {
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
       const res = await api.post(endpoint, data);
-      
+
       login(res.data.user);
-      
+
       toast.success(isLogin ? 'Welcome back' : 'Account created', {
         description: 'Successfully signed into Gossip.',
       });
@@ -48,7 +48,7 @@ export function AuthCard() {
       const serverMessage = error.response?.data?.message;
       const status = error.response?.status;
       const networkError = error.message;
-      
+
       toast.error(`Authentication Failed ${status ? `(${status})` : ''}`, {
         description: serverMessage || (status === 401 ? 'Invalid credentials.' : `Network or Server Error: ${networkError}`),
       });
@@ -72,7 +72,7 @@ export function AuthCard() {
             {isLogin ? 'Sign in to sync your conversations.' : 'Create an account to start chatting.'}
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <AnimatePresence mode="wait">
@@ -85,11 +85,11 @@ export function AuthCard() {
                   className="space-y-2 overflow-hidden"
                 >
                   <Label htmlFor="username">Username</Label>
-                  <Input 
-                    id="username" 
-                    placeholder="johndoe" 
+                  <Input
+                    id="username"
+                    placeholder="johndoe"
                     {...form.register('username')}
-                    className="bg-background/40 border-border/50 focus:border-primary/50"
+                    className="bg-background/40 border-border/50"
                   />
                   {form.formState.errors.username && (
                     <p className="text-xs text-destructive">{form.formState.errors.username.message}</p>
@@ -100,12 +100,12 @@ export function AuthCard() {
 
             <div className="space-y-2">
               <Label htmlFor="email">Email address</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="name@example.com" 
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@example.com"
                 {...form.register('email')}
-                className="bg-background/40 border-border/50 focus:border-primary/50"
+                className="bg-background/40 border-border/50"
               />
               {form.formState.errors.email && (
                 <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
@@ -114,20 +114,20 @@ export function AuthCard() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                placeholder="••••••••" 
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
                 {...form.register('password')}
-                className="bg-background/40 border-border/50 focus:border-primary/50"
+                className="bg-background/40 border-border/50"
               />
               {form.formState.errors.password && (
                 <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
               )}
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full !mt-8 transition-all hover:scale-[1.02]"
               disabled={form.formState.isSubmitting}
             >
@@ -139,8 +139,8 @@ export function AuthCard() {
         <CardFooter className="justify-center pt-2 pb-8">
           <p className="text-sm text-muted-foreground">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => {
                 setIsLogin(!isLogin);
                 form.reset();
