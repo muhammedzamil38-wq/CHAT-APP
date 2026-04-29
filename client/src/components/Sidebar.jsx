@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Settings, MoreVertical, UserPlus, Check } from 'lucide-react';
+import { Search, Settings, MoreVertical, UserPlus, Check, ShieldAlert } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
 import { useSocket } from '../contexts/SocketContext';
+import { useAuth } from '../contexts/AuthContext';
+import { AdminDashboard } from '../admin/AdminDashboard';
 
 export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
+  const { user } = useAuth();
   const [contacts, setContacts] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const { socket, onlineUsers, triggerNotification } = useSocket();
 
   const fetchFriends = async () => {
@@ -116,11 +120,24 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
           >
             <Settings className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="More Options">
+          {user?.isAdmin && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-primary hover:bg-primary/10 rounded-full"
+              onClick={() => setIsAdminOpen(true)}
+              title="Admin Dashboard"
+            >
+              <ShieldAlert className="h-5 w-5" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10" onClick={() => setIsAdminOpen(false)}>
             <MoreVertical className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
+      <AdminDashboard isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />
       
       <div className="p-3">
         <div className="relative">

@@ -4,13 +4,12 @@ import { env } from "../config/env.js";
 import { userRepository } from "../repositories/userRepository.js";
 import { AppError } from "../utils/errors.js";
 
-const signToken = (userId) =>
-  jwt.sign({ userId }, env.jwtSecret, {
+const signToken = (userId, isAdmin) =>
+  jwt.sign({ userId, isAdmin }, env.jwtSecret, {
     expiresIn: "7d"
   });
 
 export const authService = {
-  // Check if credentials are correct without issuing a token
   verifyCredentials: async (email, password) => {
     const user = await userRepository.findByEmail(email);
     if (!user) return null;
@@ -24,23 +23,21 @@ export const authService = {
     const user = await userRepository.create(email, passwordHash, username);
 
     return {
-      token: signToken(user.id),
-      user: { id: user.id, email: user.email, username: user.username }
+      token: signToken(user.id, user.isAdmin),
+      user: { id: user.id, email: user.email, username: user.username, isAdmin: user.isAdmin }
     };
   },
 
   login: async (email, password) => {
     const user = await userRepository.findByEmail(email);
-    // Note: We already verified credentials in verifyCredentials before sending OTP
-    // but we do it again here as a final safety check before issuing token.
     if (!user) throw new AppError("User not found.", 404);
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) throw new AppError("Invalid credentials.", 401);
 
     return {
-      token: signToken(user.id),
-      user: { id: user.id, email: user.email, username: user.username }
+      token: signToken(user.id, user.isAdmin),
+      user: { id: user.id, email: user.email, username: user.username, isAdmin: user.isAdmin }
     };
   },
 

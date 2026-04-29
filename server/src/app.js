@@ -8,6 +8,7 @@ import authRoutes from "./routes/authRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { env } from "./config/env.js";
 
@@ -62,6 +63,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/files", fileRoutes);
+app.use("/api/admin", adminRoutes);
 
 if (env.nodeEnv === "production") {
   const clientBuildPath = path.resolve("client/dist");
