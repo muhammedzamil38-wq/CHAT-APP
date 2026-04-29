@@ -17,6 +17,7 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 export const app = express();
+app.set('trust proxy', 1); // Trust Render's proxy for secure cookies
 
 // Security: Prevent caching of sensitive API data
 app.use("/api", (req, res, next) => {

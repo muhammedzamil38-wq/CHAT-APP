@@ -4,12 +4,15 @@ import { logMission } from '../utils/logger.js';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: false, // true for 465, false for other ports
+  port: 465, // Using SSL port for better reliability on Render/Cloud
+  secure: true, 
   auth: {
     user: env.emailUser,
     pass: env.emailPass,
   },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
 
 export const emailService = {
