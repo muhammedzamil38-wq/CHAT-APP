@@ -42,8 +42,14 @@ export const emailService = {
       logMission(`Email sent: ${info.messageId}`);
       return info;
     } catch (error) {
-      console.error(`[EMAIL-ERROR] Failed to send OTP: ${error.message}`);
-      throw error;
+      console.error(`[EMAIL-ERROR] Signal lost during dispatch: ${error.message}`);
+      if (error.code === 'ETIMEDOUT') {
+        throw new AppError("Mission brief dispatch timed out. Render might be blocking the communication port.", 503);
+      }
+      if (error.code === 'EAUTH') {
+        throw new AppError("Mission authorization rejected. Please verify your Email App Password.", 401);
+      }
+      throw new AppError(`Communication failure during identity verification: ${error.message}`, 500);
     }
   },
 };
