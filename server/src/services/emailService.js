@@ -4,17 +4,18 @@ import { logMission } from '../utils/logger.js';
 import { AppError } from '../utils/errors.js';
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.googlemail.com', // Alternative Google endpoint often better for cloud IPs
-  port: 465,
-  secure: true,
-  pool: true, // Keep connections open
-  maxConnections: 5,
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Must be false for port 587
+  requireTLS: true,
   auth: {
     user: env.emailUser,
     pass: env.emailPass,
   },
-  connectionTimeout: 20000, // Increased to 20s for cloud latency
-  socketTimeout: 20000,
+  connectionTimeout: 15000,
+  tls: {
+    rejectUnauthorized: false // Helps with certain cloud network configurations
+  }
 });
 
 export const emailService = {
