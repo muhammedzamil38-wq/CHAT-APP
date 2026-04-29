@@ -4,25 +4,21 @@ import { logMission } from '../utils/logger.js';
 import { AppError } from '../utils/errors.js';
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // Must be false for port 587
-  requireTLS: true,
+  host: 'smtp.resend.com',
+  port: 465,
+  secure: true,
   auth: {
-    user: env.emailUser,
+    user: 'resend', // Always 'resend' for their SMTP
     pass: env.emailPass,
   },
-  connectionTimeout: 15000,
-  tls: {
-    rejectUnauthorized: false // Helps with certain cloud network configurations
-  }
+  connectionTimeout: 10000,
 });
 
 export const emailService = {
   sendOTP: async (to, otp) => {
     try {
       const mailOptions = {
-        from: '"Gossip Mission Control" <no-reply@gossip.com>',
+        from: 'Gossip <onboarding@resend.dev>',
         to,
         subject: 'Your Gossip Verification Code',
         html: `
