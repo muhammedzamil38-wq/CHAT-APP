@@ -18,21 +18,31 @@ export const authController = {
   // --- REGISTRATION FLOW ---
   requestRegister: async (req, res) => {
     const { email, password, username } = req.body;
+    console.log(`[MISSION-CONTROL][AUTH] Registration request for: ${email}`);
+    
     if (!email || !password || !username) {
       throw new AppError("[MISSION-CONTROL] Registration blocked: incomplete payload.", 400);
     }
+    
     const existingUser = await userRepository.findByEmail(email);
     if (existingUser) {
       throw new AppError("[MISSION-CONTROL] Identity collision: email already registered.", 400);
     }
+    
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(`[MISSION-CONTROL][AUTH] OTP generated, attempting email dispatch...`);
+    
     await otpRepository.create(email, otp);
     await emailService.sendOTP(email, otp);
+    
+    console.log(`[MISSION-CONTROL][AUTH] Registration phase 1 complete.`);
     res.status(200).json({ message: "Verification code dispatched.", email });
   },
 
   verifyRegister: async (req, res) => {
     const { email, otp, password, username } = req.body;
+    console.log(`[MISSION-CONTROL][AUTH] Verifying registration for: ${email}`);
+    
     const isValid = await otpRepository.verify(email, otp);
     if (!isValid) throw new AppError("Invalid or expired OTP.", 401);
     
@@ -45,17 +55,20 @@ export const authController = {
   // --- LOGIN FLOW (WITH 2FA) ---
   requestLogin: async (req, res) => {
     const { email, password } = req.body;
+    console.log(`[MISSION-CONTROL][AUTH] Login request for: ${email}`);
+    
     if (!email || !password) throw new AppError("Email and password required.", 400);
 
-    // Verify credentials first (without logging in)
     const user = await authService.verifyCredentials(email, password);
     if (!user) throw new AppError("Invalid credentials.", 401);
 
-    // Generate and send OTP for 2FA
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(`[MISSION-CONTROL][AUTH] Credentials verified. Sending 2FA code...`);
+    
     await otpRepository.create(email, otp);
     await emailService.sendOTP(email, otp);
 
+    console.log(`[MISSION-CONTROL][AUTH] 2FA phase 1 complete.`);
     res.status(200).json({ message: "2FA code sent to your email.", email });
   },
 
