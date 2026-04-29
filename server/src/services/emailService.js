@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { env } from '../config/env.js';
 import { logMission } from '../utils/logger.js';
+import { AppError } from '../utils/errors.js';
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.googlemail.com', // Alternative Google endpoint often better for cloud IPs
