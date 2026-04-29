@@ -66,17 +66,23 @@ app.use("/api/files", fileRoutes);
 
 if (env.nodeEnv === "production") {
   const clientBuildPath = path.resolve("client/dist");
-  console.log(`[PRODUCTION-DEBUG] Production mode active. Serving static files from: ${clientBuildPath}`);
   
-  if (!fs.existsSync(clientBuildPath)) {
-    console.error(`[PRODUCTION-ERROR] Static build folder NOT FOUND at ${clientBuildPath}. Did you run 'npm run build'?`);
+  if (fs.existsSync(clientBuildPath)) {
+    console.log(`[PRODUCTION] Static assets found. Serving from: ${clientBuildPath}`);
+    app.use(express.static(clientBuildPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(clientBuildPath, "index.html"));
+    });
+  } else {
+    console.warn(`[PRODUCTION] API-ONLY MODE: No static assets found at ${clientBuildPath}.`);
+    app.get("/", (_req, res) => {
+      res.status(200).json({ 
+        message: "[MISSION-CONTROL] GOSSIP API Online.", 
+        status: "nominal",
+        mode: "api-only"
+      });
+    });
   }
-
-  app.use(express.static(clientBuildPath));
-  
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(clientBuildPath, "index.html"));
-  });
 }
 
 app.use(errorHandler);
