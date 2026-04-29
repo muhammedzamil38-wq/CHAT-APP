@@ -1,8 +1,8 @@
 import { AppError } from "../utils/errors.js";
 
-export const adminOnly = (req, res, next) => {
+export const adminMiddleware = (req, res, next) => {
   if (!req.user || !req.user.isAdmin) {
-    throw new AppError("[SECURITY-BREACH] Administrative privileges required.", 403);
+    throw new AppError("[MISSION-CONTROL] Access denied. Command-level authorization required.", 403);
   }
   next();
 };

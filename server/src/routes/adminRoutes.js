@@ -1,12 +1,11 @@
 import { Router } from "express";
 import { adminController } from "../controllers/adminController.js";
 import { authenticate } from "../middlewares/authMiddleware.js";
-import { adminOnly } from "../middlewares/adminMiddleware.js";
+import { adminMiddleware } from "../middlewares/adminMiddleware.js";
 
 const router = Router();
 
-router.use(authenticate);
-router.use(adminOnly);
+router.use(authenticate, adminMiddleware);
 
 router.get("/users", adminController.getUsers);
 router.post("/ban", adminController.banUser);
