@@ -4,7 +4,7 @@ export const userRepository = {
   create: async (email, passwordHash, username) => {
     const result = await pool.query(
       `INSERT INTO users (email, password_hash, username) VALUES ($1, $2, $3)
-       RETURNING id, email, username, bio, avatar_url AS "avatarUrl", is_admin AS "isAdmin"`,
+       RETURNING id, email, username, bio, avatar_url AS "avatarUrl"`,
       [email, passwordHash, username]
     );
     return result.rows[0];
@@ -12,7 +12,7 @@ export const userRepository = {
 
   findByEmail: async (email) => {
     const result = await pool.query(
-      `SELECT id, email, username, password_hash, bio, avatar_url AS "avatarUrl", is_admin AS "isAdmin" FROM users WHERE email = $1 LIMIT 1`,
+      `SELECT id, email, username, password_hash, bio, avatar_url AS "avatarUrl" FROM users WHERE email = $1 LIMIT 1`,
       [email]
     );
     return result.rows[0] ?? null;
@@ -20,7 +20,7 @@ export const userRepository = {
 
   findById: async (id) => {
     const result = await pool.query(
-      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", is_admin AS "isAdmin" FROM users WHERE id = $1 LIMIT 1`,
+      `SELECT id, email, username, bio, avatar_url AS "avatarUrl" FROM users WHERE id = $1 LIMIT 1`,
       [id]
     );
     return result.rows[0] ?? null;
@@ -33,7 +33,7 @@ export const userRepository = {
            bio = COALESCE($2, bio), 
            avatar_url = COALESCE($3, avatar_url)
        WHERE id = $4
-       RETURNING id, email, username, bio, avatar_url AS "avatarUrl", is_admin AS "isAdmin"`,
+       RETURNING id, email, username, bio, avatar_url AS "avatarUrl"`,
       [username, bio, avatarUrl, id]
     );
     return result.rows[0];
@@ -41,7 +41,7 @@ export const userRepository = {
 
   findAll: async (excludeId) => {
     const result = await pool.query(
-      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", is_admin AS "isAdmin" FROM users WHERE id != $1`,
+      `SELECT id, email, username, bio, avatar_url AS "avatarUrl" FROM users WHERE id != $1`,
       [excludeId]
     );
     return result.rows;
@@ -49,7 +49,7 @@ export const userRepository = {
 
   searchUsers: async (query, excludeId) => {
     const result = await pool.query(
-      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", is_admin AS "isAdmin" FROM users 
+      `SELECT id, email, username, bio, avatar_url AS "avatarUrl" FROM users 
        WHERE (email ILIKE $1 OR username ILIKE $1) AND id != $2`,
       [`%${query}%`, excludeId]
     );
@@ -67,7 +67,7 @@ export const userRepository = {
 
   findFriends: async (userId) => {
     const result = await pool.query(
-      `SELECT u.id, u.email, u.username, u.bio, u.avatar_url AS "avatarUrl", u.is_admin AS "isAdmin",
+      `SELECT u.id, u.email, u.username, u.bio, u.avatar_url AS "avatarUrl",
         (SELECT text FROM messages 
          WHERE (sender_id = u.id AND recipient_id = $1) 
             OR (sender_id = $1 AND recipient_id = u.id)

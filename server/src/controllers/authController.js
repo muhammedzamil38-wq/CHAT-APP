@@ -9,7 +9,7 @@ import { env } from "../config/env.js";
 const tokenCookieOptions = {
   httpOnly: true,
   secure: env.nodeEnv === "production",
-  sameSite: env.nodeEnv === "production" ? "none" : "lax",
+  sameSite: env.nodeEnv === "production" ? "none" : undefined,
   maxAge: 7 * 24 * 60 * 60 * 1000,
   path: "/"
 };
@@ -81,7 +81,8 @@ export const authController = {
 
   me: async (req, res) => {
     if (!req.user) throw new AppError("Not authenticated.", 401);
-    res.status(200).json({ user: req.user });
+    const user = await authService.getCurrentUser(req.user.id);
+    res.status(200).json({ user });
   },
 
   deleteAccount: async (req, res) => {

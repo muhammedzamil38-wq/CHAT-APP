@@ -16,23 +16,12 @@ export const initializeDatabase = async () => {
       password_hash VARCHAR(255) NOT NULL,
       bio TEXT,
       avatar_url TEXT,
-      is_admin BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
   
-  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE`);
-  
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS banned_users (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      reason TEXT,
-      banned_by INTEGER REFERENCES users(id),
-      created_at TIMESTAMP DEFAULT NOW(),
-      UNIQUE(user_id)
-    )
-  `);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS media_assets (
