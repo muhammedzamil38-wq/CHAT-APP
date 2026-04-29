@@ -3,16 +3,17 @@ import { env } from '../config/env.js';
 import { logMission } from '../utils/logger.js';
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: 465, // Using SSL port for better reliability on Render/Cloud
-  secure: true, 
+  host: 'smtp.googlemail.com', // Alternative Google endpoint often better for cloud IPs
+  port: 465,
+  secure: true,
+  pool: true, // Keep connections open
+  maxConnections: 5,
   auth: {
     user: env.emailUser,
     pass: env.emailPass,
   },
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+  connectionTimeout: 20000, // Increased to 20s for cloud latency
+  socketTimeout: 20000,
 });
 
 export const emailService = {
