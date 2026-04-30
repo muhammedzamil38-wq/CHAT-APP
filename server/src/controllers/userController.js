@@ -33,5 +33,10 @@ export const userController = {
     const user = await userRepository.findById(Number(id));
     if (!user) throw new AppError("Crew member not found.", 404);
     res.status(200).json({ user });
+  },
+
+  getAllUsersAdmin: async (req, res) => {
+    const users = await userRepository.findAll(req.user.id);
+    res.status(200).json({ users });
   }
 };
