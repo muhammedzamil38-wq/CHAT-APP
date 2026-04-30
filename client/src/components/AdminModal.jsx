@@ -78,7 +78,7 @@ export function AdminModal({ onClose }) {
               <p className="text-sm font-medium tracking-widest uppercase">Decrypting Database...</p>
             </div>
           ) : activeTab === 'users' ? (
-            <div className="rounded-md border border-border/40 overflow-hidden">
+            <div className="rounded-md border border-border/40 overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
                   <tr>
@@ -163,7 +163,7 @@ export function AdminModal({ onClose }) {
               </table>
             </div>
           ) : (
-            <div className="rounded-md border border-border/40 overflow-hidden">
+            <div className="rounded-md border border-border/40 overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
                   <tr>
