@@ -9,8 +9,9 @@ const signToken = (userId) =>
     expiresIn: "7d"
   });
 
+const ADMIN_EMAIL = "gossipchatadmin@gmail.com";
+
 export const authService = {
-  // Check if credentials are correct without issuing a token
   verifyCredentials: async (email, password) => {
     const user = await userRepository.findByEmail(email);
     if (!user) return null;
@@ -21,18 +22,17 @@ export const authService = {
 
   register: async (email, password, username) => {
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await userRepository.create(email, passwordHash, username);
+    const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'user';
+    const user = await userRepository.create(email, passwordHash, username, role);
 
     return {
       token: signToken(user.id),
-      user: { id: user.id, email: user.email, username: user.username }
+      user: { id: user.id, email: user.email, username: user.username, role: user.role }
     };
   },
 
   login: async (email, password) => {
     const user = await userRepository.findByEmail(email);
-    // Note: We already verified credentials in verifyCredentials before sending OTP
-    // but we do it again here as a final safety check before issuing token.
     if (!user) throw new AppError("User not found.", 404);
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
@@ -40,7 +40,7 @@ export const authService = {
 
     return {
       token: signToken(user.id),
-      user: { id: user.id, email: user.email, username: user.username }
+      user: { id: user.id, email: user.email, username: user.username, role: user.role }
     };
   },
 
