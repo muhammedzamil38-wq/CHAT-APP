@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Settings, MoreVertical, UserPlus, Check } from 'lucide-react';
+import { Search, Settings, MoreVertical, UserPlus, Check, ShieldAlert } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
 import { useSocket } from '../contexts/SocketContext';
+import { useAuth } from '../contexts/AuthContext';
+import { AdminModal } from './AdminModal';
 
 export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
   const [contacts, setContacts] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showAdminModal, setShowAdminModal] = useState(false);
   const { socket, onlineUsers, triggerNotification } = useSocket();
+  const { user } = useAuth();
 
   const fetchFriends = async () => {
     try {
@@ -107,6 +111,17 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
       <div className="p-4 border-b border-border/40 flex items-center justify-between">
         <h2 className="text-xl font-semibold tracking-tight">Gossip</h2>
         <div className="flex gap-1">
+          {user?.role === 'admin' && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10"
+              onClick={() => setShowAdminModal(true)}
+              title="Mission Control Directory"
+            >
+              <ShieldAlert className="h-4 w-4" />
+            </Button>
+          )}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -217,6 +232,10 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
           ))
         )}
       </div>
+
+      {showAdminModal && (
+        <AdminModal onClose={() => setShowAdminModal(false)} />
+      )}
     </div>
   );
 }
