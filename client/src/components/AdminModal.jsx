@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Shield, Users, Mail, Clock, ShieldAlert } from 'lucide-react';
 import { Button } from './ui/button';
 import { api } from '../lib/api';
@@ -21,7 +22,7 @@ export function AdminModal({ onClose }) {
     fetchAllUsers();
   }, []);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-background/90 backdrop-blur-md sm:p-6 animate-in fade-in duration-200">
       <div className="bg-card w-full h-full sm:w-[98vw] sm:h-[98vh] sm:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-primary/20 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         
@@ -135,7 +136,8 @@ export function AdminModal({ onClose }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
