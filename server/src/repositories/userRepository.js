@@ -100,5 +100,26 @@ export const userRepository = {
       [isBanned, id]
     );
     return result.rows[0];
+  },
+
+  createReport: async (reporterId, reportedId, reason) => {
+    const result = await pool.query(
+      `INSERT INTO reports (reporter_id, reported_id, reason) VALUES ($1, $2, $3) RETURNING id`,
+      [reporterId, reportedId, reason]
+    );
+    return result.rows[0];
+  },
+
+  getAllReports: async () => {
+    const result = await pool.query(
+      `SELECT r.id, r.reason, r.created_at AS "createdAt", 
+              rep.email AS "reporterEmail", rep.username AS "reporterUsername", 
+              sus.id AS "reportedId", sus.email AS "reportedEmail", sus.username AS "reportedUsername", sus.is_banned AS "isBanned"
+       FROM reports r
+       JOIN users rep ON r.reporter_id = rep.id
+       JOIN users sus ON r.reported_id = sus.id
+       ORDER BY r.created_at DESC`
+    );
+    return result.rows;
   }
 };

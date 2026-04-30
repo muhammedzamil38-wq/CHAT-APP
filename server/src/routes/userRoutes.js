@@ -16,6 +16,7 @@ router.post("/report/:id", authenticate, userController.reportUser);
 
 // Admin-only intelligence
 router.get("/admin/all", authenticate, adminOnly, userController.getAllUsersAdmin);
+router.get("/admin/reports", authenticate, adminOnly, userController.getReportsAdmin);
 router.post("/admin/ban/:id", authenticate, adminOnly, userController.banUser);
 
 export default router;

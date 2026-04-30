@@ -70,22 +70,35 @@ export const userController = {
 
   reportUser: async (req, res) => {
     const { id } = req.params;
+    const { reason } = req.body;
     
+    if (!reason || reason.trim() === '') {
+      throw new AppError("Reason for reporting is required.", 400);
+    }
+
     const reporter = await userRepository.findById(req.user.id);
     const reported = await userRepository.findById(Number(id));
     
     if (!reported) throw new AppError("User not found.", 404);
+
+    // Save report to database
+    await userRepository.createReport(req.user.id, Number(id), reason.trim());
 
     // Notify all clients. Only admins will actually display this notification on the frontend.
     import('../socket.js').then(({ emitMissionEvent }) => {
       emitMissionEvent("admin_notification", {
         type: "report",
         title: "Rogue Operative Reported",
-        message: `${reporter.username || reporter.email} has requested a ban for ${reported.username || reported.email}.`,
+        message: `${reporter.username || reporter.email} reported ${reported.username || reported.email}. Reason: ${reason.trim()}`,
         reportedId: id
       });
     });
 
     res.status(200).json({ message: "Report filed successfully. Admin notified." });
+  },
+
+  getReportsAdmin: async (req, res) => {
+    const reports = await userRepository.getAllReports();
+    res.status(200).json({ reports });
   }
 };

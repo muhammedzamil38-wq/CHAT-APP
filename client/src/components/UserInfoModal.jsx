@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Mail, Info, Calendar, MessageSquare, Shield } from 'lucide-react';
 import { Button } from './ui/button';
+import { api } from '../lib/api';
 
 export function UserInfoModal({ user, isOpen, onClose }) {
   if (!isOpen || !user) return null;
@@ -74,8 +75,14 @@ export function UserInfoModal({ user, isOpen, onClose }) {
             variant="outline" 
             className="w-full border-red-500/20 hover:bg-red-500/10 text-red-500 hover:text-red-400" 
             onClick={async () => {
+              const reason = window.prompt("State the reason for this report (Required):");
+              if (!reason || reason.trim() === '') {
+                alert("Report canceled: Reason is required.");
+                return;
+              }
+
               try {
-                await api.post(`/api/users/report/${user.id}`);
+                await api.post(`/api/users/report/${user.id}`, { reason: reason.trim() });
                 alert("Report successfully filed. Mission Control has been notified.");
                 onClose();
               } catch (error) {
