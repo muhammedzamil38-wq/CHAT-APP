@@ -69,8 +69,23 @@ export function UserInfoModal({ user, isOpen, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-border/40 bg-white/5">
-          <Button variant="outline" className="w-full border-primary/20 hover:bg-primary/5 text-primary" onClick={onClose}>
+        <div className="p-6 border-t border-border/40 bg-white/5 space-y-3">
+          <Button 
+            variant="outline" 
+            className="w-full border-red-500/20 hover:bg-red-500/10 text-red-500 hover:text-red-400" 
+            onClick={async () => {
+              try {
+                await api.post(`/api/users/report/${user.id}`);
+                // toast.success is not imported here, but we could add it, or just rely on the button feedback
+                onClose();
+              } catch (error) {
+                console.error("Failed to report user", error);
+              }
+            }}
+          >
+            Report Rogue Operative
+          </Button>
+          <Button variant="ghost" className="w-full hover:bg-white/5 text-muted-foreground" onClick={onClose}>
             Close Intelligence File
           </Button>
         </div>

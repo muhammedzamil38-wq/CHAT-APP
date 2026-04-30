@@ -4,7 +4,7 @@ export const userRepository = {
   create: async (email, passwordHash, username, role = 'user') => {
     const result = await pool.query(
       `INSERT INTO users (email, password_hash, username, role) VALUES ($1, $2, $3, $4)
-       RETURNING id, email, username, bio, avatar_url AS "avatarUrl", role`,
+       RETURNING id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned"`,
       [email, passwordHash, username, role]
     );
     return result.rows[0];
@@ -12,7 +12,7 @@ export const userRepository = {
 
   findByEmail: async (email) => {
     const result = await pool.query(
-      `SELECT id, email, username, password_hash, bio, avatar_url AS "avatarUrl", role FROM users WHERE email = $1 LIMIT 1`,
+      `SELECT id, email, username, password_hash, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned" FROM users WHERE email = $1 LIMIT 1`,
       [email]
     );
     return result.rows[0] ?? null;
@@ -20,7 +20,7 @@ export const userRepository = {
 
   findById: async (id) => {
     const result = await pool.query(
-      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", role FROM users WHERE id = $1 LIMIT 1`,
+      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned" FROM users WHERE id = $1 LIMIT 1`,
       [id]
     );
     return result.rows[0] ?? null;
@@ -33,7 +33,7 @@ export const userRepository = {
            bio = COALESCE($2, bio), 
            avatar_url = COALESCE($3, avatar_url)
        WHERE id = $4
-       RETURNING id, email, username, bio, avatar_url AS "avatarUrl", role`,
+       RETURNING id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned"`,
       [username, bio, avatarUrl, id]
     );
     return result.rows[0];
@@ -41,7 +41,7 @@ export const userRepository = {
 
   findAll: async (excludeId) => {
     const result = await pool.query(
-      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", role FROM users WHERE id != $1`,
+      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned" FROM users WHERE id != $1`,
       [excludeId]
     );
     return result.rows;
@@ -49,8 +49,8 @@ export const userRepository = {
 
   searchUsers: async (query, excludeId) => {
     const result = await pool.query(
-      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", role FROM users 
-       WHERE (email ILIKE $1 OR username ILIKE $1) AND id != $2`,
+      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned" FROM users 
+       WHERE (email ILIKE $1 OR username ILIKE $1) AND id != $2 AND is_banned = false`,
       [`%${query}%`, excludeId]
     );
     return result.rows;
@@ -67,7 +67,7 @@ export const userRepository = {
 
   findFriends: async (userId) => {
     const result = await pool.query(
-      `SELECT u.id, u.email, u.username, u.bio, u.avatar_url AS "avatarUrl", u.role,
+      `SELECT u.id, u.email, u.username, u.bio, u.avatar_url AS "avatarUrl", u.role, u.is_banned AS "isBanned",
         (SELECT text FROM messages 
          WHERE (sender_id = u.id AND recipient_id = $1) 
             OR (sender_id = $1 AND recipient_id = u.id)
@@ -92,5 +92,13 @@ export const userRepository = {
 
   promoteToAdmin: async (email) => {
     await pool.query(`UPDATE users SET role = 'admin' WHERE email = $1`, [email]);
+  },
+
+  setBanStatus: async (id, isBanned) => {
+    const result = await pool.query(
+      `UPDATE users SET is_banned = $1 WHERE id = $2 AND role != 'admin' RETURNING id, is_banned AS "isBanned"`,
+      [isBanned, id]
+    );
+    return result.rows[0];
   }
 };

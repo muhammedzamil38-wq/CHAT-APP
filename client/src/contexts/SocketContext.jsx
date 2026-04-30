@@ -37,10 +37,17 @@ export function SocketProvider({ children }) {
         setOnlineUsers(users);
       });
 
+      newSocket.on('admin_notification', (data) => {
+        if (user.role === 'admin') {
+          triggerNotification(data.title, data.message);
+        }
+      });
+
       setSocket(newSocket);
 
       return () => {
         newSocket.off('getOnlineUsers');
+        newSocket.off('admin_notification');
         newSocket.close();
       };
     } else {

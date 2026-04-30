@@ -11,7 +11,11 @@ router.post("/add", authenticate, userController.addFriend);
 router.put("/profile", authenticate, userController.updateProfile);
 router.get("/profile/:id", authenticate, userController.getProfile);
 
+// Report a user
+router.post("/report/:id", authenticate, userController.reportUser);
+
 // Admin-only intelligence
 router.get("/admin/all", authenticate, adminOnly, userController.getAllUsersAdmin);
+router.post("/admin/ban/:id", authenticate, adminOnly, userController.banUser);
 
 export default router;

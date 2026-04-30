@@ -38,5 +38,39 @@ export const userController = {
   getAllUsersAdmin: async (req, res) => {
     const users = await userRepository.findAll(req.user.id);
     res.status(200).json({ users });
+  },
+
+  banUser: async (req, res) => {
+    const { id } = req.params;
+    const { isBanned } = req.body;
+    
+    // Admin cannot ban another admin
+    const targetUser = await userRepository.findById(Number(id));
+    if (!targetUser) throw new AppError("User not found.", 404);
+    if (targetUser.role === 'admin') throw new AppError("Cannot ban an administrator.", 403);
+
+    const updatedUser = await userRepository.setBanStatus(Number(id), isBanned);
+    res.status(200).json({ user: updatedUser, message: `User ${isBanned ? 'banned' : 'unbanned'} successfully.` });
+  },
+
+  reportUser: async (req, res) => {
+    const { id } = req.params;
+    
+    const reporter = await userRepository.findById(req.user.id);
+    const reported = await userRepository.findById(Number(id));
+    
+    if (!reported) throw new AppError("User not found.", 404);
+
+    // Notify all clients. Only admins will actually display this notification on the frontend.
+    import('../socket.js').then(({ emitMissionEvent }) => {
+      emitMissionEvent("admin_notification", {
+        type: "report",
+        title: "Rogue Operative Reported",
+        message: `${reporter.username || reporter.email} has requested a ban for ${reported.username || reported.email}.`,
+        reportedId: id
+      });
+    });
+
+    res.status(200).json({ message: "Report filed successfully. Admin notified." });
   }
 };

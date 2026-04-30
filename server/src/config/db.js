@@ -17,6 +17,7 @@ export const initializeDatabase = async () => {
       bio TEXT,
       avatar_url TEXT,
       role VARCHAR(50) DEFAULT 'user',
+      is_banned BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
@@ -24,6 +25,7 @@ export const initializeDatabase = async () => {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user'`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT false`);
   
   // Enforce Master Admin Role
   await pool.query(`UPDATE users SET role = 'admin' WHERE email = 'gossipchatadmin@gmail.com'`);

@@ -16,6 +16,10 @@ export const authService = {
     const user = await userRepository.findByEmail(email);
     if (!user) return null;
 
+    if (user.isBanned) {
+      throw new AppError("Mission Access Denied: Operative has been permanently banned from the network.", 403);
+    }
+
     const isMatch = await bcrypt.compare(password, user.password_hash);
     return isMatch ? user : null;
   },
@@ -34,6 +38,10 @@ export const authService = {
   login: async (email, password) => {
     const user = await userRepository.findByEmail(email);
     if (!user) throw new AppError("User not found.", 404);
+
+    if (user.isBanned) {
+      throw new AppError("Mission Access Denied: Operative has been permanently banned from the network.", 403);
+    }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) throw new AppError("Invalid credentials.", 401);

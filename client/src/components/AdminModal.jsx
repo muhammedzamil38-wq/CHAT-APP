@@ -80,10 +80,10 @@ export function AdminModal({ onClose }) {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-muted-foreground break-all">
                         <div className="flex items-center gap-2">
-                          <Mail className="w-3 h-3 opacity-50" />
-                          <span className="truncate max-w-[150px] block">{user.email}</span>
+                          <Mail className="w-3 h-3 opacity-50 shrink-0" />
+                          <span>{user.email}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -98,9 +98,27 @@ export function AdminModal({ onClose }) {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="inline-flex items-center gap-1 text-xs text-emerald-500">
-                          <Clock className="w-3 h-3" /> Active
-                        </span>
+                        {user.role !== 'admin' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-7 px-2 text-[10px] font-bold uppercase tracking-wider ${
+                              user.isBanned 
+                                ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 hover:text-emerald-400 border border-emerald-500/20' 
+                                : 'bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-400 border border-red-500/20'
+                            }`}
+                            onClick={async () => {
+                              try {
+                                await api.post(`/api/users/admin/ban/${user.id}`, { isBanned: !user.isBanned });
+                                setUsers(users.map(u => u.id === user.id ? { ...u, isBanned: !user.isBanned } : u));
+                              } catch (error) {
+                                console.error('Failed to update ban status', error);
+                              }
+                            }}
+                          >
+                            {user.isBanned ? 'Unban Operative' : 'Ban Operative'}
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}
