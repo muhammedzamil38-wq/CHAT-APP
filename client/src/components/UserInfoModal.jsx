@@ -76,10 +76,11 @@ export function UserInfoModal({ user, isOpen, onClose }) {
             onClick={async () => {
               try {
                 await api.post(`/api/users/report/${user.id}`);
-                // toast.success is not imported here, but we could add it, or just rely on the button feedback
+                alert("Report successfully filed. Mission Control has been notified.");
                 onClose();
               } catch (error) {
                 console.error("Failed to report user", error);
+                alert(`Error: ${error.response?.data?.message || error.message}`);
               }
             }}
           >

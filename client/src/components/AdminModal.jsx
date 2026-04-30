@@ -112,8 +112,11 @@ export function AdminModal({ onClose }) {
                               try {
                                 await api.post(`/api/users/admin/ban/${user.id}`, { isBanned: !user.isBanned });
                                 setUsers(users.map(u => u.id === user.id ? { ...u, isBanned: !user.isBanned } : u));
+                                // Show a temporary alert to confirm it worked
+                                alert(`Success: User is now ${!user.isBanned ? 'BANNED' : 'UNBANNED'}`);
                               } catch (error) {
                                 console.error('Failed to update ban status', error);
+                                alert(`Error: ${error.response?.data?.message || error.message}`);
                               }
                             }}
                           >
