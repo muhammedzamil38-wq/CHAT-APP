@@ -50,6 +50,21 @@ export const userController = {
     if (targetUser.role === 'admin') throw new AppError("Cannot ban an administrator.", 403);
 
     const updatedUser = await userRepository.setBanStatus(Number(id), isBanned);
+
+    // If the user is being banned, forcefully log them out in real-time
+    if (isBanned) {
+      import('../socket.js').then(({ getSocket }) => {
+        try {
+          const io = getSocket();
+          io.to(`user_${id}`).emit("force_logout", {
+            message: "Mission Access Denied: Operative has been permanently banned from the network."
+          });
+        } catch (error) {
+          console.error("Socket error during ban:", error);
+        }
+      });
+    }
+
     res.status(200).json({ user: updatedUser, message: `User ${isBanned ? 'banned' : 'unbanned'} successfully.` });
   },
 
