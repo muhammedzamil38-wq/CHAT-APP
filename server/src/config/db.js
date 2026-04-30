@@ -24,6 +24,9 @@ export const initializeDatabase = async () => {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user'`);
+  
+  // Enforce Master Admin Role
+  await pool.query(`UPDATE users SET role = 'admin' WHERE email = 'gossipchatadmin@gmail.com'`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS media_assets (
