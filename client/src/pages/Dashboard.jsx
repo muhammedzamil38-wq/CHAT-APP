@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatArea } from '../components/ChatArea';
 import { SettingsModal } from '../components/SettingsModal';
+import { CallOverlay } from '../components/CallOverlay';
 
 export function Dashboard() {
   const [selectedUser, setSelectedUser] = useState(null);
@@ -59,6 +60,7 @@ export function Dashboard() {
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)} 
       />
+      <CallOverlay />
     </div>
   );
 }

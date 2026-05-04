@@ -9,6 +9,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useCall } from '../contexts/CallContext';
 import { api } from '../lib/api';
 import { ImageEditorModal } from './ImageEditorModal';
 import { EmojiPicker } from './EmojiPicker';
@@ -19,6 +20,7 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [input, setInput] = useState('');
   const { socket, onlineUsers, triggerNotification } = useSocket();
   const { user } = useAuth();
+  const { initiateCall } = useCall();
   const endRef = useRef(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -259,8 +261,24 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
         <div className="flex gap-1 md:gap-2 text-muted-foreground">
           {!isMobile && (
             <>
-              <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="Voice Call"><Phone className="w-5 h-5" /></Button>
-              <Button variant="ghost" size="icon" className="hover:text-foreground rounded-full hover:bg-white/10" title="Video Call"><Video className="w-5 h-5" /></Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="hover:text-foreground rounded-full hover:bg-white/10" 
+                title="Voice Call"
+                onClick={() => initiateCall(selectedUser.id, selectedUser, false)}
+              >
+                <Phone className="w-5 h-5" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="hover:text-foreground rounded-full hover:bg-white/10" 
+                title="Video Call"
+                onClick={() => initiateCall(selectedUser.id, selectedUser, true)}
+              >
+                <Video className="w-5 h-5" />
+              </Button>
             </>
           )}
           <Button 

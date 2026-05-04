@@ -76,6 +76,31 @@ export const initializeSocket = (httpServer) => {
       io.to(`user_${updatedMessage.senderId}`).emit("message_deleted", updatedMessage);
     });
 
+    // WebRTC Signaling
+    socket.on("call_user", (data) => {
+      logMission(`Call initiated by ${data.callerId} to ${data.userToCall}`);
+      io.to(`user_${data.userToCall}`).emit("call_user", data);
+    });
+
+    socket.on("answer_call", (data) => {
+      logMission(`Call answered by ${data.callerId} to ${data.to}`);
+      io.to(`user_${data.to}`).emit("answer_call", data);
+    });
+
+    socket.on("ice_candidate", (data) => {
+      io.to(`user_${data.to}`).emit("ice_candidate", data);
+    });
+
+    socket.on("reject_call", (data) => {
+      logMission(`Call rejected by ${data.callerId} to ${data.to}`);
+      io.to(`user_${data.to}`).emit("reject_call", data);
+    });
+
+    socket.on("end_call", (data) => {
+      logMission(`Call ended by ${data.callerId} to ${data.to}`);
+      io.to(`user_${data.to}`).emit("end_call", data);
+    });
+
     socket.on("disconnect", () => {
       logMission(`Socket uplink closed: ${socket.id}`);
       
