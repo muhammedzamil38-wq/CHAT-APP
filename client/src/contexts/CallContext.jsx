@@ -22,12 +22,14 @@ export function CallProvider({ children }) {
   const peerConnection = useRef(null);
 
   // Audio elements for ringing sounds
-  const [incomingRing] = useState(new Audio('https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3'));
-  const [outgoingRing] = useState(new Audio('https://assets.mixkit.co/active_storage/sfx/1197/1197-preview.mp3'));
+  const [incomingRing] = useState(new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3'));
+  const [outgoingRing] = useState(new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'));
 
   useEffect(() => {
     incomingRing.loop = true;
+    incomingRing.volume = 0.3;
     outgoingRing.loop = true;
+    outgoingRing.volume = 0.3;
 
     if (callStatus === 'ringing') {
       incomingRing.play().catch(e => console.log('Audio playback blocked'));
