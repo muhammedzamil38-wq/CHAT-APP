@@ -21,6 +21,34 @@ export function CallProvider({ children }) {
   const [remoteStream, setRemoteStream] = useState(null);
   const peerConnection = useRef(null);
 
+  // Audio elements for ringing sounds
+  const [incomingRing] = useState(new Audio('https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3'));
+  const [outgoingRing] = useState(new Audio('https://assets.mixkit.co/active_storage/sfx/1197/1197-preview.mp3'));
+
+  useEffect(() => {
+    incomingRing.loop = true;
+    outgoingRing.loop = true;
+
+    if (callStatus === 'ringing') {
+      incomingRing.play().catch(e => console.log('Audio playback blocked'));
+    } else {
+      incomingRing.pause();
+      incomingRing.currentTime = 0;
+    }
+
+    if (callStatus === 'calling') {
+      outgoingRing.play().catch(e => console.log('Audio playback blocked'));
+    } else {
+      outgoingRing.pause();
+      outgoingRing.currentTime = 0;
+    }
+
+    return () => {
+      incomingRing.pause();
+      outgoingRing.pause();
+    };
+  }, [callStatus, incomingRing, outgoingRing]);
+
   // STUN Servers for WebRTC
   const rtcConfig = {
     iceServers: [
