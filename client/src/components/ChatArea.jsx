@@ -259,28 +259,24 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
           </div>
         </div>
         <div className="flex gap-1 md:gap-2 text-muted-foreground">
-          {!isMobile && (
-            <>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="hover:text-foreground rounded-full hover:bg-white/10" 
-                title="Voice Call"
-                onClick={() => initiateCall(selectedUser.id, selectedUser, false)}
-              >
-                <Phone className="w-5 h-5" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="hover:text-foreground rounded-full hover:bg-white/10" 
-                title="Video Call"
-                onClick={() => initiateCall(selectedUser.id, selectedUser, true)}
-              >
-                <Video className="w-5 h-5" />
-              </Button>
-            </>
-          )}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hover:text-foreground rounded-full hover:bg-white/10" 
+            title="Voice Call"
+            onClick={() => initiateCall(selectedUser.id, selectedUser, false)}
+          >
+            <Phone className="w-5 h-5" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hover:text-foreground rounded-full hover:bg-white/10" 
+            title="Video Call"
+            onClick={() => initiateCall(selectedUser.id, selectedUser, true)}
+          >
+            <Video className="w-5 h-5" />
+          </Button>
           <Button 
             variant="ghost" 
             size="icon" 

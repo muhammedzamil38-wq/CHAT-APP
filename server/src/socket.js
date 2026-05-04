@@ -85,6 +85,7 @@ export const initializeSocket = (httpServer) => {
     socket.on("answer_call", (data) => {
       logMission(`Call answered by ${data.callerId} to ${data.to}`);
       io.to(`user_${data.to}`).emit("answer_call", data);
+      socket.to(`user_${data.callerId}`).emit("call_handled_elsewhere");
     });
 
     socket.on("ice_candidate", (data) => {
@@ -94,6 +95,7 @@ export const initializeSocket = (httpServer) => {
     socket.on("reject_call", (data) => {
       logMission(`Call rejected by ${data.callerId} to ${data.to}`);
       io.to(`user_${data.to}`).emit("reject_call", data);
+      socket.to(`user_${data.callerId}`).emit("call_handled_elsewhere");
     });
 
     socket.on("end_call", (data) => {

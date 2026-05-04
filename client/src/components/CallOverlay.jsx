@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCall } from '../contexts/CallContext';
 import { Phone, Video, Mic, MicOff, PhoneOff, VideoOff } from 'lucide-react';
 import { Button } from './ui/button';
@@ -20,6 +20,18 @@ export function CallOverlay() {
     localStream,
     remoteStream
   } = useCall();
+
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, callStatus, localVideoRef]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, callStatus, remoteVideoRef]);
 
   if (callStatus === 'idle') return null;
 

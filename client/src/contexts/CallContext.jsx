@@ -70,11 +70,16 @@ export function CallProvider({ children }) {
       resetCallState();
     };
 
+    const handleHandledElsewhere = () => {
+      resetCallState();
+    };
+
     socket.on('call_user', handleCallUser);
     socket.on('answer_call', handleAnswerCall);
     socket.on('ice_candidate', handleIceCandidate);
     socket.on('reject_call', handleRejectCall);
     socket.on('end_call', handleEndCall);
+    socket.on('call_handled_elsewhere', handleHandledElsewhere);
 
     return () => {
       socket.off('call_user');
@@ -82,20 +87,9 @@ export function CallProvider({ children }) {
       socket.off('ice_candidate');
       socket.off('reject_call');
       socket.off('end_call');
+      socket.off('call_handled_elsewhere');
     };
   }, [socket, user]);
-
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  }, [localStream, localVideoRef.current]);
-
-  useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream, remoteVideoRef.current]);
 
   const createPeerConnection = (targetUserId) => {
     const pc = new RTCPeerConnection(rtcConfig);
