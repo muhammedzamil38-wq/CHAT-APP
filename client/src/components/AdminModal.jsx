@@ -79,7 +79,7 @@ export function AdminModal({ onClose }) {
             </div>
           ) : activeTab === 'users' ? (
             <div className="rounded-md border border-border/40 overflow-x-auto">
-              <table className="w-full text-sm text-left">
+              <table className="w-full min-w-[700px] text-sm text-left">
                 <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
                   <tr>
                     <th className="px-4 py-3 font-medium">Operative</th>
@@ -164,7 +164,7 @@ export function AdminModal({ onClose }) {
             </div>
           ) : (
             <div className="rounded-md border border-border/40 overflow-x-auto">
-              <table className="w-full text-sm text-left">
+              <table className="w-full min-w-[700px] text-sm text-left">
                 <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
                   <tr>
                     <th className="px-4 py-3 font-medium">Suspect</th>

@@ -80,10 +80,10 @@ export function AuthCard() {
       <Card className="glass relative overflow-hidden shadow-2xl border-border/40">
         <CardHeader className="text-center pb-6 pt-8 relative">
           <div className="absolute top-4 right-4">
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               className="rounded-full h-10 w-10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all"
               onClick={toggleTheme}
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
@@ -112,17 +112,18 @@ export function AuthCard() {
                 >
                   <div className="text-center space-y-2">
                     <Label className="text-lg font-bold">Enter Verification Code</Label>
+                    <p className="text-xs text-muted-foreground">You may check your spam folder too.</p>
                     <p className="text-xs text-muted-foreground">Sent to {form.getValues('email')}</p>
                   </div>
-                  <Input 
-                    placeholder="000000" 
+                  <Input
+                    placeholder="000000"
                     value={otpValue}
                     onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     className="text-center text-3xl tracking-[0.5em] font-bold h-16 bg-background/40 border-primary/30"
                   />
-                  <Button 
-                    type="button" 
-                    variant="link" 
+                  <Button
+                    type="button"
+                    variant="link"
                     className="w-full text-xs"
                     onClick={() => setShowOTP(false)}
                   >
