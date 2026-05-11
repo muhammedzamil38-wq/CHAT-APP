@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Shield, Users, Mail, Clock, ShieldAlert, BarChart3, Activity, AlertTriangle, Zap } from 'lucide-react';
+import { X, Shield, Users, Mail, Clock, ShieldAlert, BarChart3, Activity, AlertTriangle, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Button } from './ui/button';
 import { api } from '../lib/api';
@@ -12,27 +12,34 @@ export function AdminModal({ onClose }) {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const { onlineUsers } = useSocket();
 
   useEffect(() => {
-    const fetchAdminData = async () => {
-      try {
-        const [usersRes, reportsRes, analyticsRes] = await Promise.all([
-          api.get('/api/users/admin/all'),
-          api.get('/api/users/admin/reports'),
-          api.get('/api/users/admin/analytics')
-        ]);
-        setUsers(usersRes.data.users);
-        setReports(reportsRes.data.reports);
-        setAnalytics(analyticsRes.data.analytics);
-      } catch (error) {
-        console.error('Failed to fetch admin directory', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAdminData();
-  }, []);
+  }, [activeTab, page]);
+
+  const fetchAdminData = async () => {
+    setLoading(true);
+    try {
+      if (activeTab === 'overview') {
+        const res = await api.get('/api/users/admin/analytics');
+        setAnalytics(res.data.analytics);
+      } else if (activeTab === 'users') {
+        const res = await api.get(`/api/users/admin/all?page=${page}&limit=10`);
+        setUsers(res.data.users);
+        setTotalPages(res.data.pagination.totalPages);
+      } else if (activeTab === 'reports') {
+        const res = await api.get('/api/users/admin/reports');
+        setReports(res.data.reports);
+      }
+    } catch (error) {
+      console.error('Failed to fetch admin data', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatChartData = (data) => {
     if (!data) return [];
@@ -77,7 +84,10 @@ export function AdminModal({ onClose }) {
             </button>
             <button 
               className={`text-sm font-bold uppercase tracking-wider pb-2 px-2 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'users' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-              onClick={() => setActiveTab('users')}
+              onClick={() => {
+                setActiveTab('users');
+                setPage(1);
+              }}
             >
               <Users className="w-4 h-4" /> Global Roster
             </button>
@@ -262,6 +272,33 @@ export function AdminModal({ onClose }) {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={page === 1} 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={page === totalPages} 
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="rounded-md border border-border/40 overflow-x-auto">

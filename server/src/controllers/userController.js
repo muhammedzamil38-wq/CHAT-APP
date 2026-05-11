@@ -36,8 +36,22 @@ export const userController = {
   },
 
   getAllUsersAdmin: async (req, res) => {
-    const users = await userRepository.findAll(req.user.id);
-    res.status(200).json({ users });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const users = await userRepository.findAll(req.user.id, limit, offset);
+    const total = await userRepository.countAll(req.user.id);
+
+    res.status(200).json({ 
+      users,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
   },
 
   banUser: async (req, res) => {

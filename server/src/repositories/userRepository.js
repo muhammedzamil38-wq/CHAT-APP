@@ -39,12 +39,24 @@ export const userRepository = {
     return result.rows[0];
   },
 
-  findAll: async (excludeId) => {
+  findAll: async (excludeId, limit = 10, offset = 0) => {
     const result = await pool.query(
-      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned" FROM users WHERE id != $1`,
-      [excludeId]
+      `SELECT id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned" 
+       FROM users 
+       WHERE id != $1 
+       ORDER BY created_at DESC 
+       LIMIT $2 OFFSET $3`,
+      [excludeId, limit, offset]
     );
     return result.rows;
+  },
+
+  countAll: async (excludeId) => {
+    const result = await pool.query(
+      `SELECT COUNT(*) FROM users WHERE id != $1`,
+      [excludeId]
+    );
+    return parseInt(result.rows[0].count);
   },
 
   searchUsers: async (query, excludeId) => {
