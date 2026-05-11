@@ -189,117 +189,119 @@ export function AdminModal({ onClose }) {
               </div>
             </div>
           ) : activeTab === 'users' ? (
-            <div className="rounded-md border border-border/40 overflow-x-auto">
-              <table className="w-full min-w-[700px] text-sm text-left">
-                <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Operative</th>
-                    <th className="px-4 py-3 font-medium">Contact Signal</th>
-                    <th className="px-4 py-3 font-medium">Clearance</th>
-                    <th className="px-4 py-3 font-medium text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 bg-card/50">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden shrink-0">
-                            {user.avatarUrl ? (
-                              <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                            ) : (
-                              <UserAvatarFallback name={user.username || user.email} />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium text-foreground">{user.username || 'Unknown Agent'}</p>
-                            {user.bio && <p className="text-[10px] text-muted-foreground truncate max-w-[150px]">{user.bio}</p>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground break-all">
-                        <div className="flex items-center gap-2">
-                          <Mail className="w-3 h-3 opacity-50 shrink-0" />
-                          <span>{user.email}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {user.role === 'admin' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-wider">
-                            <Shield className="w-3 h-3" /> Admin
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wider">
-                            <Users className="w-3 h-3" /> User
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {user.role !== 'admin' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-7 px-2 text-[10px] font-bold uppercase tracking-wider ${
-                              user.isBanned 
-                                ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 hover:text-emerald-400 border border-emerald-500/20' 
-                                : 'bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-400 border border-red-500/20'
-                            }`}
-                            onClick={async () => {
-                              try {
-                                await api.post(`/api/users/admin/ban/${user.id}`, { isBanned: !user.isBanned });
-                                setUsers(users.map(u => u.id === user.id ? { ...u, isBanned: !user.isBanned } : u));
-                                // Update reports list too if we ban them from the users tab
-                                setReports(reports.map(r => r.reportedId === user.id ? { ...r, isBanned: !user.isBanned } : r));
-                                alert(`Success: User is now ${!user.isBanned ? 'BANNED' : 'UNBANNED'}`);
-                              } catch (error) {
-                                console.error('Failed to update ban status', error);
-                                alert(`Error: ${error.response?.data?.message || error.message}`);
-                              }
-                            }}
-                          >
-                            {user.isBanned ? 'Unban Operative' : 'Ban Operative'}
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {users.length === 0 && (
+            <>
+              <div className="rounded-md border border-border/40 overflow-x-auto">
+                <table className="w-full min-w-[700px] text-sm text-left">
+                  <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
                     <tr>
-                      <td colSpan="4" className="px-4 py-8 text-center text-muted-foreground italic">
-                        No external operatives found in the database.
-                      </td>
+                      <th className="px-4 py-3 font-medium">Operative</th>
+                      <th className="px-4 py-3 font-medium">Contact Signal</th>
+                      <th className="px-4 py-3 font-medium">Clearance</th>
+                      <th className="px-4 py-3 font-medium text-right">Status</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination Controls */}
-            <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">
-                Page {page} of {totalPages}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={page === 1} 
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={page === totalPages} 
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+                  </thead>
+                  <tbody className="divide-y divide-border/40 bg-card/50">
+                    {users.map((user) => (
+                      <tr key={user.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden shrink-0">
+                              {user.avatarUrl ? (
+                                <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                              ) : (
+                                <UserAvatarFallback name={user.username || user.email} />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground">{user.username || 'Unknown Agent'}</p>
+                              {user.bio && <p className="text-[10px] text-muted-foreground truncate max-w-[150px]">{user.bio}</p>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground break-all">
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-3 h-3 opacity-50 shrink-0" />
+                            <span>{user.email}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {user.role === 'admin' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-wider">
+                              <Shield className="w-3 h-3" /> Admin
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wider">
+                              <Users className="w-3 h-3" /> User
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {user.role !== 'admin' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`h-7 px-2 text-[10px] font-bold uppercase tracking-wider ${
+                                user.isBanned 
+                                  ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 hover:text-emerald-400 border border-emerald-500/20' 
+                                  : 'bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-400 border border-red-500/20'
+                              }`}
+                              onClick={async () => {
+                                try {
+                                  await api.post(`/api/users/admin/ban/${user.id}`, { isBanned: !user.isBanned });
+                                  setUsers(users.map(u => u.id === user.id ? { ...u, isBanned: !user.isBanned } : u));
+                                  // Update reports list too if we ban them from the users tab
+                                  setReports(reports.map(r => r.reportedId === user.id ? { ...r, isBanned: !user.isBanned } : r));
+                                  alert(`Success: User is now ${!user.isBanned ? 'BANNED' : 'UNBANNED'}`);
+                                } catch (error) {
+                                  console.error('Failed to update ban status', error);
+                                  alert(`Error: ${error.response?.data?.message || error.message}`);
+                                }
+                              }}
+                            >
+                              {user.isBanned ? 'Unban Operative' : 'Ban Operative'}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {users.length === 0 && (
+                      <tr>
+                        <td colSpan="4" className="px-4 py-8 text-center text-muted-foreground italic">
+                          No external operatives found in the database.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </div>
+
+              {/* Pagination Controls */}
+              <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">
+                  Page {page} of {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={page === 1} 
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={page === totalPages} 
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
           ) : (
             <div className="rounded-md border border-border/40 overflow-x-auto">
               <table className="w-full min-w-[700px] text-sm text-left">
