@@ -14,7 +14,7 @@ export function UserInfoModal({ user, isOpen, onClose }) {
         <div className="p-4 border-b border-border/40 flex items-center justify-between bg-white/5">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Info className="w-5 h-5 text-primary" />
-            Contact Intelligence
+            User Profile
           </h2>
           <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-white/10">
             <X className="w-5 h-5" />
@@ -28,11 +28,11 @@ export function UserInfoModal({ user, isOpen, onClose }) {
               {user.avatarUrl ? (
                 <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                (user.username || user.email || 'A')[0].toUpperCase()
+                (user.username || user.email || 'U')[0].toUpperCase()
               )}
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-foreground">{user.username || 'Crew Member'}</h3>
+              <h3 className="text-2xl font-bold text-foreground">{user.username || 'User'}</h3>
               <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
                 <Mail className="w-3 h-3" /> {user.email}
               </p>
@@ -42,11 +42,11 @@ export function UserInfoModal({ user, isOpen, onClose }) {
           {/* Bio Section */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <Shield className="w-3 h-3 text-primary" /> Mission Brief (Bio)
+              <Shield className="w-3 h-3 text-primary" /> Biography
             </h4>
             <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 min-h-[100px]">
-              <p className="text-sm leading-relaxed text-foreground/90 italic">
-                {user.bio || "No mission brief provided. This crew member is maintaining radio silence."}
+              <p className="text-sm leading-relaxed text-foreground/90">
+                {user.bio || "No biography provided."}
               </p>
             </div>
           </div>
@@ -56,15 +56,15 @@ export function UserInfoModal({ user, isOpen, onClose }) {
             <div className="p-4 rounded-xl bg-white/5 border border-white/5 flex items-center gap-3">
               <Calendar className="w-5 h-5 text-primary/60" />
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Enlisted On</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">Joined On</p>
                 <p className="text-sm font-medium">October 2023</p>
               </div>
             </div>
             <div className="p-4 rounded-xl bg-white/5 border border-white/5 flex items-center gap-3">
               <MessageSquare className="w-5 h-5 text-primary/60" />
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Security Status</p>
-                <p className="text-sm font-medium text-emerald-500">Verified Personnel</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">Account Status</p>
+                <p className="text-sm font-medium text-emerald-500">Verified Account</p>
               </div>
             </div>
           </div>
@@ -77,27 +77,27 @@ export function UserInfoModal({ user, isOpen, onClose }) {
               variant="outline" 
               className="w-full border-red-500/20 hover:bg-red-500/10 text-red-500 hover:text-red-400" 
               onClick={async () => {
-                const reason = window.prompt("State the reason for this report (Required):");
+                const reason = window.prompt("Reason for report (Required):");
                 if (!reason || reason.trim() === '') {
-                  toast.info("Report Protocol Aborted: No reason provided.");
+                  toast.info("Report cancelled: No reason provided.");
                   return;
                 }
 
                 try {
                   await api.post(`/api/users/report/${user.id}`, { reason: reason.trim() });
-                  toast.success("Intel Logged: Mission Control has received your report.");
+                  toast.success("Report submitted successfully.");
                   onClose();
                 } catch (error) {
                   console.error("Failed to report user", error);
-                  toast.error(`Protocol Failed: ${error.response?.data?.message || error.message}`);
+                  toast.error(`Failed to submit report: ${error.response?.data?.message || error.message}`);
                 }
               }}
             >
-              Report Rogue Operative
+              Report User
             </Button>
           )}
           <Button variant="ghost" className="w-full hover:bg-white/5 text-muted-foreground" onClick={onClose}>
-            Close Intelligence File
+            Close
           </Button>
         </div>
       </div>

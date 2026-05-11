@@ -215,7 +215,7 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto border border-primary/20">
             <MessageSquare className="w-8 h-8 text-primary/40" />
           </div>
-          <p className="text-sm font-medium">Uplink established. Select a crew member to start a mission.</p>
+          <p className="text-sm font-medium">Select a user to start a conversation.</p>
         </div>
       </div>
     );
@@ -379,7 +379,7 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
           
           <div className="flex-1 relative">
             <Input 
-              placeholder={editingMessage ? "Edit message..." : "Type a mission update..."} 
+              placeholder={editingMessage ? "Edit message..." : "Type a message..."} 
               value={input}
               onChange={(e) => setInput(e.target.value)}
               className="bg-background/50 border-border/50 h-11 pr-10"

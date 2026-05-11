@@ -24,7 +24,7 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
       setContacts(users.map(u => ({
         ...u,
         avatar: (u.username || u.email)[0].toUpperCase(),
-        lastMessage: u.lastMessage || 'Secure link active',
+        lastMessage: u.lastMessage || 'Start a conversation',
         time: u.lastMessageAt ? new Date(u.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
         unread: 0
       })));
@@ -63,7 +63,7 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
 
     socket.on('receive_message', handleNewMessage);
     return () => socket.off('receive_message', handleNewMessage);
-  }, [socket, selectedUser]);
+  }, [socket, selectedUser, contacts]);
 
   // Reset unread count when a user is selected
   useEffect(() => {
@@ -97,7 +97,7 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
   const handleAddFriend = async (friendId) => {
     try {
       await api.post('/api/users/add', { friendId });
-      toast.success('Crew member added');
+      toast.success('User added to contacts');
       setSearchQuery('');
       setSearchResults([]);
       fetchFriends();
