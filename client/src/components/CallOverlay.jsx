@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useCall } from '../contexts/CallContext';
 import { Phone, Video, Mic, MicOff, PhoneOff, VideoOff } from 'lucide-react';
 import { Button } from './ui/button';
+import { toast } from 'sonner';
 
 export function CallOverlay() {
   const { 
@@ -18,7 +19,8 @@ export function CallOverlay() {
     toggleMute, 
     toggleVideo,
     localStream,
-    remoteStream
+    remoteStream,
+    handleMediaError
   } = useCall();
 
   useEffect(() => {

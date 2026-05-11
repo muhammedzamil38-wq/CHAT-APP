@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Mail, Info, Calendar, MessageSquare, Shield } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { api } from '../lib/api';
 
@@ -78,17 +79,17 @@ export function UserInfoModal({ user, isOpen, onClose }) {
               onClick={async () => {
                 const reason = window.prompt("State the reason for this report (Required):");
                 if (!reason || reason.trim() === '') {
-                  alert("Report canceled: Reason is required.");
+                  toast.info("Report Protocol Aborted: No reason provided.");
                   return;
                 }
 
                 try {
                   await api.post(`/api/users/report/${user.id}`, { reason: reason.trim() });
-                  alert("Report successfully filed. Mission Control has been notified.");
+                  toast.success("Intel Logged: Mission Control has received your report.");
                   onClose();
                 } catch (error) {
                   console.error("Failed to report user", error);
-                  alert(`Error: ${error.response?.data?.message || error.message}`);
+                  toast.error(`Protocol Failed: ${error.response?.data?.message || error.message}`);
                 }
               }}
             >

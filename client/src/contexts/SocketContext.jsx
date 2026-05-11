@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import { api } from '../lib/api';
 
@@ -45,16 +46,15 @@ export function SocketProvider({ children }) {
       });
 
       newSocket.on('force_logout', (data) => {
-        alert(data.message);
-        // We need to import or use logout from AuthContext. 
-        // We already have 'user' from useAuth, let's grab 'logout' too.
-        // Wait, 'logout' is not in the dependency array. It's safer to just reload the page 
-        // which will trigger the checkAuth -> fail -> set user to null.
-        // Or we can just call api.post('/api/auth/logout') directly here.
-        api.post('/api/auth/logout').then(() => {
-          window.location.reload();
-        }).catch(() => {
-          window.location.reload();
+        toast.error(data.message, {
+          duration: Infinity,
+          action: {
+            label: "Acknowledge",
+            onClick: () => window.location.href = "/login"
+          }
+        });
+        api.post('/api/auth/logout').finally(() => {
+          window.location.href = "/login";
         });
       });
 

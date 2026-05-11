@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { toast } from 'sonner';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 
@@ -150,7 +151,7 @@ export function CallProvider({ children }) {
       return stream;
     } catch (err) {
       console.error("Failed to get local stream", err);
-      alert("Failed to access camera/microphone. Please check permissions.");
+      toast.error("Hardware Access Denied: Failed to access camera or microphone. Check permissions.");
       return null;
     }
   };

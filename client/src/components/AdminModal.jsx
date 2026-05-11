@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Shield, Users, Mail, Clock, ShieldAlert, BarChart3, Activity, AlertTriangle, Zap, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { api } from '../lib/api';
 import { useSocket } from '../contexts/SocketContext';
@@ -270,10 +271,10 @@ export function AdminModal({ onClose }) {
                                   setUsers(users.map(u => u.id === user.id ? { ...u, isBanned: !user.isBanned } : u));
                                   // Update reports list too if we ban them from the users tab
                                   setReports(reports.map(r => r.reportedId === user.id ? { ...r, isBanned: !user.isBanned } : r));
-                                  alert(`Success: User is now ${!user.isBanned ? 'BANNED' : 'UNBANNED'}`);
+                                  toast.success(`Mission Success: Operative is now ${!user.isBanned ? 'BANNED' : 'UNBANNED'}`);
                                 } catch (error) {
                                   console.error('Failed to update ban status', error);
-                                  alert(`Error: ${error.response?.data?.message || error.message}`);
+                                  toast.error(`Security Breach: ${error.response?.data?.message || error.message}`);
                                 }
                               }}
                             >
@@ -359,15 +360,15 @@ export function AdminModal({ onClose }) {
                               : 'bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-400 border border-red-500/20'
                           }`}
                           onClick={async () => {
-                            try {
-                              await api.post(`/api/users/admin/ban/${report.reportedId}`, { isBanned: !report.isBanned });
-                              setReports(reports.map(r => r.reportedId === report.reportedId ? { ...r, isBanned: !report.isBanned } : r));
-                              setUsers(users.map(u => u.id === report.reportedId ? { ...u, isBanned: !report.isBanned } : u));
-                              alert(`Success: User is now ${!report.isBanned ? 'BANNED' : 'UNBANNED'}`);
-                            } catch (error) {
-                              console.error('Failed to update ban status', error);
-                              alert(`Error: ${error.response?.data?.message || error.message}`);
-                            }
+                             try {
+                               await api.post(`/api/users/admin/ban/${report.reportedId}`, { isBanned: !report.isBanned });
+                               setReports(reports.map(r => r.reportedId === report.reportedId ? { ...r, isBanned: !report.isBanned } : r));
+                               setUsers(users.map(u => u.id === report.reportedId ? { ...u, isBanned: !report.isBanned } : u));
+                               toast.success(`Investigation Closed: User is now ${!report.isBanned ? 'BANNED' : 'UNBANNED'}`);
+                             } catch (error) {
+                               console.error('Failed to update ban status', error);
+                               toast.error(`Command Failed: ${error.response?.data?.message || error.message}`);
+                             }
                           }}
                         >
                           {report.isBanned ? 'Unban Operative' : 'Ban Operative'}
