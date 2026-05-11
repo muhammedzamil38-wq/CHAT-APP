@@ -5,6 +5,7 @@ import { useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { CallProvider } from './contexts/CallContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { PublicRoute } from './components/PublicRoute';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 
@@ -30,7 +31,14 @@ function App() {
         <Router>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/login" element={<Login />} />
+            <Route 
+              path="/login" 
+              element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              } 
+            />
             <Route 
               path="/dashboard" 
               element={
