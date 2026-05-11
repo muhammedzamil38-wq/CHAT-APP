@@ -100,5 +100,10 @@ export const userController = {
   getReportsAdmin: async (req, res) => {
     const reports = await userRepository.getAllReports();
     res.status(200).json({ reports });
+  },
+
+  getAnalyticsAdmin: async (req, res) => {
+    const analytics = await userRepository.getAnalytics();
+    res.status(200).json({ analytics });
   }
 };

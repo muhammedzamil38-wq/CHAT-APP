@@ -121,5 +121,42 @@ export const userRepository = {
        ORDER BY r.created_at DESC`
     );
     return result.rows;
+  },
+
+  getAnalytics: async () => {
+    // Basic counts
+    const counts = await pool.query(`
+      SELECT 
+        (SELECT COUNT(*) FROM users) as "totalUsers",
+        (SELECT COUNT(*) FROM users WHERE is_banned = true) as "bannedUsers",
+        (SELECT COUNT(*) FROM reports) as "totalReports",
+        (SELECT COUNT(*) FROM messages) as "totalMessages"
+    `);
+
+    // User growth (last 7 days)
+    const userGrowth = await pool.query(`
+      SELECT DATE_TRUNC('day', created_at) as day, COUNT(*) as count
+      FROM users
+      WHERE created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY day
+      ORDER BY day ASC
+    `);
+
+    // Message activity (last 7 days)
+    const messageActivity = await pool.query(`
+      SELECT DATE_TRUNC('day', created_at) as day, COUNT(*) as count
+      FROM messages
+      WHERE created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY day
+      ORDER BY day ASC
+    `);
+
+    return {
+      stats: counts.rows[0],
+      trends: {
+        users: userGrowth.rows,
+        messages: messageActivity.rows
+      }
+    };
   }
 };
