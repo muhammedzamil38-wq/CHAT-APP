@@ -39,22 +39,30 @@ export const userRepository = {
     return result.rows[0];
   },
 
-  findAll: async (excludeId, limit = 10, offset = 0) => {
+  findAll: async (excludeId, limit = 10, offset = 0, search = '') => {
+    const searchQuery = search ? `AND (username ILIKE $4 OR email ILIKE $4)` : '';
+    const params = [excludeId, limit, offset];
+    if (search) params.push(`%${search}%`);
+
     const result = await pool.query(
       `SELECT id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned" 
        FROM users 
-       WHERE id != $1 
+       WHERE id != $1 ${searchQuery}
        ORDER BY created_at DESC 
        LIMIT $2 OFFSET $3`,
-      [excludeId, limit, offset]
+      params
     );
     return result.rows;
   },
 
-  countAll: async (excludeId) => {
+  countAll: async (excludeId, search = '') => {
+    const searchQuery = search ? `AND (username ILIKE $2 OR email ILIKE $2)` : '';
+    const params = [excludeId];
+    if (search) params.push(`%${search}%`);
+
     const result = await pool.query(
-      `SELECT COUNT(*) FROM users WHERE id != $1`,
-      [excludeId]
+      `SELECT COUNT(*) FROM users WHERE id != $1 ${searchQuery}`,
+      params
     );
     return parseInt(result.rows[0].count);
   },

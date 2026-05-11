@@ -38,10 +38,11 @@ export const userController = {
   getAllUsersAdmin: async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
     const offset = (page - 1) * limit;
 
-    const users = await userRepository.findAll(req.user.id, limit, offset);
-    const total = await userRepository.countAll(req.user.id);
+    const users = await userRepository.findAll(req.user.id, limit, offset, search);
+    const total = await userRepository.countAll(req.user.id, search);
 
     res.status(200).json({ 
       users,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Shield, Users, Mail, Clock, ShieldAlert, BarChart3, Activity, AlertTriangle, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Shield, Users, Mail, Clock, ShieldAlert, BarChart3, Activity, AlertTriangle, Zap, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Button } from './ui/button';
 import { api } from '../lib/api';
@@ -14,11 +14,15 @@ export function AdminModal({ onClose }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState('');
   const { onlineUsers } = useSocket();
 
   useEffect(() => {
-    fetchAdminData();
-  }, [activeTab, page]);
+    const timer = setTimeout(() => {
+      fetchAdminData();
+    }, 300); // Simple debounce
+    return () => clearTimeout(timer);
+  }, [activeTab, page, search]);
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -27,7 +31,7 @@ export function AdminModal({ onClose }) {
         const res = await api.get('/api/users/admin/analytics');
         setAnalytics(res.data.analytics);
       } else if (activeTab === 'users') {
-        const res = await api.get(`/api/users/admin/all?page=${page}&limit=10`);
+        const res = await api.get(`/api/users/admin/all?page=${page}&limit=10&search=${search}`);
         setUsers(res.data.users);
         setTotalPages(res.data.pagination.totalPages);
       } else if (activeTab === 'reports') {
@@ -190,6 +194,21 @@ export function AdminModal({ onClose }) {
             </div>
           ) : activeTab === 'users' ? (
             <>
+              {/* Search Bar */}
+              <div className="mb-4 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input 
+                  type="text"
+                  placeholder="Search operatives by name or email..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1); // Reset to first page on search
+                  }}
+                  className="w-full bg-muted/20 border border-border/40 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/50"
+                />
+              </div>
+
               <div className="rounded-md border border-border/40 overflow-x-auto">
                 <table className="w-full min-w-[700px] text-sm text-left">
                   <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
