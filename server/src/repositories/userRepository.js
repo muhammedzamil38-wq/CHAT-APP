@@ -1,19 +1,27 @@
 import { pool } from "../config/db.js";
 
 export const userRepository = {
-  create: async (email, passwordHash, username, role = 'user') => {
+  create: async (email, passwordHash, username, role = 'user', googleId = null, avatarUrl = null) => {
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, username, role) VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (email, password_hash, username, role, google_id, avatar_url) VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned"`,
-      [email, passwordHash, username, role]
+      [email, passwordHash, username, role, googleId, avatarUrl]
     );
     return result.rows[0];
   },
 
   findByEmail: async (email) => {
     const result = await pool.query(
-      `SELECT id, email, username, password_hash, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned" FROM users WHERE email = $1 LIMIT 1`,
+      `SELECT id, email, username, password_hash, google_id AS "googleId", bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned" FROM users WHERE email = $1 LIMIT 1`,
       [email]
+    );
+    return result.rows[0] ?? null;
+  },
+
+  findByGoogleId: async (googleId) => {
+    const result = await pool.query(
+      `SELECT id, email, username, password_hash, google_id AS "googleId", bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned" FROM users WHERE google_id = $1 LIMIT 1`,
+      [googleId]
     );
     return result.rows[0] ?? null;
   },

@@ -17,4 +17,8 @@ router.post("/logout", authController.logout);
 router.get("/me", authenticate, authController.me);
 router.delete("/delete-account", authenticate, authController.deleteAccount);
 
+// Google OAuth
+router.get("/google", authController.googleAuth);
+router.get("/google/callback", authController.googleCallback);
+
 export default router;

@@ -32,5 +32,8 @@ export const env = {
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
   emailUser: process.env.EMAIL_USER,
   emailPass: process.env.EMAIL_PASS,
-  clientOrigin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173"
+  clientOrigin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173",
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL ?? "http://localhost:5000/api/auth/google/callback"
 };

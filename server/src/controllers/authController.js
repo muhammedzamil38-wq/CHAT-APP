@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import { authService } from "../services/authService.js";
 import { emailService } from "../services/emailService.js";
 import { otpRepository } from "../repositories/otpRepository.js";
@@ -102,5 +103,39 @@ export const authController = {
     await authService.deleteUser(req.user.id);
     res.clearCookie("token", tokenCookieOptions);
     res.status(200).json({ message: "Account purged." });
+  },
+
+  // --- GOOGLE OAUTH ---
+  googleAuth: (req, res, next) => {
+    import('passport').then(passport => {
+      passport.default.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+    });
+  },
+
+  googleCallback: (req, res, next) => {
+    import('passport').then(passport => {
+      passport.default.authenticate('google', { session: false }, async (err, user) => {
+        if (err || !user) {
+          console.error('[MISSION-CONTROL][AUTH] Google callback failure:', err);
+          return res.redirect(`${env.clientOrigin}/login?error=auth_failed`);
+        }
+
+        try {
+          // Generate JWT for the Google user
+          const token = jwt.sign({ userId: user.id }, env.jwtSecret, { expiresIn: '7d' });
+          
+          // Set cookie
+          res.cookie("token", token, tokenCookieOptions);
+          
+          emitMissionEvent("user_login", { userId: user.id, email: user.email, mode: "google" });
+
+          // Redirect to frontend dashboard
+          res.redirect(`${env.clientOrigin}/dashboard`);
+        } catch (error) {
+          console.error('[MISSION-CONTROL][AUTH] Token generation failed:', error);
+          res.redirect(`${env.clientOrigin}/login?error=token_error`);
+        }
+      })(req, res, next);
+    });
   }
 };

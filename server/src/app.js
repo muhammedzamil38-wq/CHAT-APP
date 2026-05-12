@@ -10,6 +10,8 @@ import userRoutes from "./routes/userRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { env } from "./config/env.js";
+import passport from "passport";
+import { configurePassport } from "./config/passportConfig.js";
 
 const uploadsDir = path.resolve("uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -17,6 +19,8 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 export const app = express();
+configurePassport();
+app.use(passport.initialize());
 app.set('trust proxy', 1); // Trust Render's proxy for secure cookies
 
 // Security: Prevent caching of sensitive API data

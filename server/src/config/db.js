@@ -13,7 +13,8 @@ export const initializeDatabase = async () => {
       id SERIAL PRIMARY KEY,
       username VARCHAR(255),
       email VARCHAR(255) UNIQUE NOT NULL,
-      password_hash VARCHAR(255) NOT NULL,
+      password_hash VARCHAR(255),
+      google_id VARCHAR(255) UNIQUE,
       bio TEXT,
       avatar_url TEXT,
       role VARCHAR(50) DEFAULT 'user',
@@ -21,6 +22,9 @@ export const initializeDatabase = async () => {
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+
+  await pool.query(`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE`);
   
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
