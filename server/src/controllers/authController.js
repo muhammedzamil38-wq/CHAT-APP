@@ -7,10 +7,12 @@ import { AppError } from "../utils/errors.js";
 import { emitMissionEvent } from "../socket.js";
 import { env } from "../config/env.js";
 
+const isProduction = env.nodeEnv === "production" || process.env.NODE_ENV === "production";
+
 const tokenCookieOptions = {
   httpOnly: true,
-  secure: env.nodeEnv === "production",
-  sameSite: env.nodeEnv === "production" ? "none" : "lax",
+  secure: true, // Always true for modern browsers to handle cross-site cookies
+  sameSite: "none", // Required for cross-domain cookies (Vercel -> Render)
   maxAge: 7 * 24 * 60 * 60 * 1000,
   path: "/"
 };
