@@ -192,7 +192,7 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
       if (mode === 'everyone') {
         socket.emit('message_deleted', res.data);
       } else {
-        setMessages(prev => prev.filter(m => Number(m.id) !== Number(msgId)));
+        setMessages(prev => prev.map(m => Number(m.id) === Number(msgId) ? { ...m, isLocallyDeleted: true } : m));
       }
     } catch (error) {
       toast.error("Failed to delete message");
@@ -330,7 +330,7 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                 ${m.senderId === user.id 
                   ? 'bg-primary text-primary-foreground rounded-tr-none border-primary/20' 
                   : 'bg-secondary/60 dark:bg-[#2a2a2a] text-foreground rounded-tl-none border-border/40 dark:border-white/5'}
-                ${m.isDeleted ? 'opacity-50 italic' : ''}
+                ${(m.isDeleted || m.isLocallyDeleted) ? 'opacity-50 italic' : ''}
               `}>
                 {m.replyToId && (
                   <div className={`
@@ -362,7 +362,9 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                     )}
                   </div>
                 )}
-                <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                <p className="leading-relaxed whitespace-pre-wrap">
+                  {m.isLocallyDeleted ? '🚫 This message was deleted for you' : m.text}
+                </p>
                 <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
                   <span className="text-[10px]">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   {m.senderId === user.id && (

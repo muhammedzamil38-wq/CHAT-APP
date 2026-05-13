@@ -20,13 +20,13 @@ export const messageRepository = {
     const result = await pool.query(
       `SELECT m.id, m.sender_id AS "senderId", m.recipient_id AS "to", m.text, m.file_url AS "fileUrl", m.file_type AS "fileType", m.file_name AS "fileName", 
               m.reply_to_id AS "replyToId", m.is_forwarded AS "isForwarded", m.created_at AS "createdAt", m.is_edited AS "isEdited", m.is_deleted AS "isDeleted",
-              rm.text AS "replyToText", rm.sender_id AS "replyToSenderId"
+              rm.text AS "replyToText", rm.sender_id AS "replyToSenderId",
+              (mv.id IS NOT NULL) AS "isLocallyDeleted"
        FROM messages m
        LEFT JOIN message_visibility mv ON mv.message_id = m.id AND mv.user_id = $1
        LEFT JOIN messages rm ON rm.id = m.reply_to_id
        WHERE ((m.sender_id = $1 AND m.recipient_id = $2)
           OR (m.sender_id = $2 AND m.recipient_id = $1))
-          AND mv.id IS NULL
        ORDER BY m.created_at ASC`,
       [userId1, userId2]
     );
