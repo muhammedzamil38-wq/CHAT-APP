@@ -1,12 +1,13 @@
 import { pool } from "../config/db.js";
 
 export const messageRepository = {
-  save: async (senderId, recipientId, text, fileUrl = null, fileType = null, fileName = null) => {
+  save: async (senderId, recipientId, text, fileUrl = null, fileType = null, fileName = null, replyToId = null, isForwarded = false) => {
     try {
       const result = await pool.query(
-        `INSERT INTO messages (sender_id, recipient_id, text, file_url, file_type, file_name) VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id, sender_id AS "senderId", recipient_id AS "to", text, file_url AS "fileUrl", file_type AS "fileType", file_name AS "fileName", created_at AS "createdAt", is_edited AS "isEdited", is_deleted AS "isDeleted"`,
-        [senderId, recipientId, text, fileUrl, fileType, fileName]
+        `INSERT INTO messages (sender_id, recipient_id, text, file_url, file_type, file_name, reply_to_id, is_forwarded) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, sender_id AS "senderId", recipient_id AS "to", text, file_url AS "fileUrl", file_type AS "fileType", file_name AS "fileName", reply_to_id AS "replyToId", is_forwarded AS "isForwarded", created_at AS "createdAt", is_edited AS "isEdited", is_deleted AS "isDeleted"`,
+        [senderId, recipientId, text, fileUrl, fileType, fileName, replyToId, isForwarded]
       );
       return result.rows[0];
     } catch (error) {
@@ -17,9 +18,12 @@ export const messageRepository = {
 
   getConversation: async (userId1, userId2) => {
     const result = await pool.query(
-      `SELECT m.id, m.sender_id AS "senderId", m.recipient_id AS "to", m.text, m.file_url AS "fileUrl", m.file_type AS "fileType", m.file_name AS "fileName", m.created_at AS "createdAt", m.is_edited AS "isEdited", m.is_deleted AS "isDeleted"
+      `SELECT m.id, m.sender_id AS "senderId", m.recipient_id AS "to", m.text, m.file_url AS "fileUrl", m.file_type AS "fileType", m.file_name AS "fileName", 
+              m.reply_to_id AS "replyToId", m.is_forwarded AS "isForwarded", m.created_at AS "createdAt", m.is_edited AS "isEdited", m.is_deleted AS "isDeleted",
+              rm.text AS "replyToText", rm.sender_id AS "replyToSenderId"
        FROM messages m
        LEFT JOIN message_visibility mv ON mv.message_id = m.id AND mv.user_id = $1
+       LEFT JOIN messages rm ON rm.id = m.reply_to_id
        WHERE ((m.sender_id = $1 AND m.recipient_id = $2)
           OR (m.sender_id = $2 AND m.recipient_id = $1))
           AND mv.id IS NULL

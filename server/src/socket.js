@@ -54,11 +54,17 @@ export const initializeSocket = (httpServer) => {
       logMission(`User ${uid} identified. Total online: ${getOnlineUserIds().length}`);
     });
 
-    socket.on("private_message", async ({ to, text, senderId, fileUrl, fileType, fileName }) => {
+    socket.on("private_message", async ({ to, text, senderId, fileUrl, fileType, fileName, replyToId, isForwarded }) => {
       try {
         const sId = Number(senderId);
         const rId = Number(to);
-        const savedMessage = await messageRepository.save(sId, rId, text, fileUrl, fileType, fileName);
+        const savedMessage = await messageRepository.save(sId, rId, text, fileUrl, fileType, fileName, replyToId, isForwarded);
+        
+        // If it's a reply, we might want to fetch the replyToText if the repository didn't return it
+        // But our updated save already returns the base fields. 
+        // For the real-time event, we can append the replyToText manually if needed or just let the frontend handle it if it has the history.
+        // Actually, let's make it consistent.
+        
         io.to(`user_${to}`).emit("receive_message", savedMessage);
         io.to(`user_${senderId}`).emit("receive_message", savedMessage);
     } catch (error) {

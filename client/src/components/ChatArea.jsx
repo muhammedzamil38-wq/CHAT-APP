@@ -14,6 +14,7 @@ import { api } from '../lib/api';
 import { ImageEditorModal } from './ImageEditorModal';
 import { EmojiPicker } from './EmojiPicker';
 import { UserInfoModal } from './UserInfoModal';
+import { Dialog } from './ui/dialog';
 
 export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [messages, setMessages] = useState([]);
@@ -35,6 +36,12 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   // Modals
   const [forwardingMessage, setForwardingMessage] = useState(null);
   const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
+  const [contacts, setContacts] = useState([]);
+  
+  // Reply and Delete states
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [messageToDelete, setMessageToDelete] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const handleMessage = (message) => {
     // Only show messages if they belong to this conversation
@@ -117,15 +124,46 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
         senderId: user.id,
         fileUrl,
         fileType,
-        fileName
+        fileName,
+        replyToId: replyingTo?.id
       });
 
       setInput('');
       setPendingFile(null);
+      setReplyingTo(null);
     } catch (error) {
       toast.error("Failed to deliver message");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleForwardMessage = async (recipient) => {
+    if (!forwardingMessage) return;
+    try {
+      socket.emit('private_message', {
+        to: recipient.id,
+        text: forwardingMessage.text,
+        senderId: user.id,
+        fileUrl: forwardingMessage.fileUrl,
+        fileType: forwardingMessage.fileType,
+        fileName: forwardingMessage.fileName,
+        isForwarded: true
+      });
+      setIsForwardModalOpen(false);
+      setForwardingMessage(null);
+      toast.success(`Message forwarded to ${recipient.username || recipient.email}`);
+    } catch (error) {
+      toast.error("Forwarding failed");
+    }
+  };
+
+  const fetchContacts = async () => {
+    try {
+      const res = await api.get('/api/users/friends');
+      setContacts(res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch contacts', error);
     }
   };
 
@@ -166,15 +204,8 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   };
 
   const handleDeleteMsg = (msg) => {
-    if (Number(msg.senderId) === Number(user?.id)) {
-      if (window.confirm('Delete this message for everyone?')) {
-        executeDelete(msg.id, 'everyone');
-      }
-    } else {
-      if (window.confirm('Delete this message for you?')) {
-        executeDelete(msg.id, 'me');
-      }
-    }
+    setMessageToDelete(msg);
+    setIsDeleteModalOpen(true);
   };
 
   const handleFileSelect = (e) => {
@@ -299,8 +330,23 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                 ${m.senderId === user.id 
                   ? 'bg-primary text-primary-foreground rounded-tr-none border-primary/20' 
                   : 'bg-secondary/60 dark:bg-[#2a2a2a] text-foreground rounded-tl-none border-border/40 dark:border-white/5'}
-                ${m.isDeleted ? 'opacity-50 italic' : ''}
-              `}>
+                {m.replyToId && (
+                  <div className={`
+                    mb-2 p-2 rounded-lg border-l-4 text-xs bg-black/10 dark:bg-white/5 
+                    ${m.senderId === user.id ? 'border-white/30' : 'border-primary/50'}
+                  `}>
+                    <p className="font-bold opacity-60 mb-1">
+                      {m.replyToSenderId === user.id ? 'You' : (selectedUser.username || selectedUser.email)}
+                    </p>
+                    <p className="truncate italic">{m.replyToText || 'Original message not found'}</p>
+                  </div>
+                )}
+                {m.isForwarded && (
+                  <div className="flex items-center gap-1 opacity-40 text-[10px] mb-1 italic">
+                    <Forward className="w-3 h-3" />
+                    <span>Forwarded</span>
+                  </div>
+                )}
                 {m.fileUrl && !m.isDeleted && (
                   <div className="mb-2 rounded-lg overflow-hidden border border-white/10">
                     {m.fileType === 'image' ? (
@@ -328,13 +374,19 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                     absolute top-0 flex gap-1 p-1 bg-white/10 dark:bg-black/60 backdrop-blur-xl rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 border border-white/20
                     ${m.senderId === user.id ? 'right-full mr-3' : 'left-full ml-3'}
                   `}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/20 text-foreground" onClick={() => setReplyingTo(m)} title="Reply">
+                      <MessageSquare className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/20 text-foreground" onClick={() => { setForwardingMessage(m); fetchContacts(); setIsForwardModalOpen(true); }} title="Forward">
+                      <Forward className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/20 text-foreground" onClick={() => navigator.clipboard.writeText(m.text)} title="Copy">
                       <Copy className="w-4 h-4" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/20 text-destructive" onClick={() => handleDeleteMsg(m)} title="Delete">
                       <Trash2 className="w-4 h-4" />
                     </Button>
-                    {m.senderId === user.id && (
+                    {m.senderId === user.id && (new Date() - new Date(m.createdAt) < 10 * 60 * 1000) && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/20 text-foreground" onClick={() => startEdit(m)} title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </Button>
@@ -350,6 +402,17 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
 
       {/* Input Area */}
       <div className="p-4 bg-card/30 backdrop-blur-xl border-t border-border/40 relative z-20">
+        {/* Reply Preview */}
+        {replyingTo && (
+          <div className="absolute bottom-full left-4 right-4 p-3 bg-background/90 backdrop-blur-md border border-border/40 rounded-t-xl flex items-center gap-3 animate-in slide-in-from-bottom-2">
+            <div className="w-1 bg-primary h-8 rounded-full" />
+            <div className="flex-1 min-w-0 text-xs">
+              <p className="font-bold text-primary mb-0.5">Replying to {replyingTo.senderId === user.id ? 'yourself' : (selectedUser.username || selectedUser.email)}</p>
+              <p className="text-muted-foreground truncate">{replyingTo.text}</p>
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setReplyingTo(null)}><X className="w-4 h-4" /></Button>
+          </div>
+        )}
         {/* File Preview */}
         {pendingFile && (
           <div className="absolute bottom-full left-4 right-4 p-2 bg-background/90 backdrop-blur-md border border-border/40 rounded-t-xl flex items-center gap-3 animate-in slide-in-from-bottom-2">
@@ -411,6 +474,60 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
         isOpen={showUserInfo} 
         onClose={() => setShowUserInfo(false)} 
       />
+
+      {/* Delete Modal */}
+      <Dialog
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete Message"
+        description="Choose how you want to remove this mission log."
+        footer={
+          <>
+            {messageToDelete?.senderId === user.id && (
+              <Button 
+                variant="destructive" 
+                onClick={() => { executeDelete(messageToDelete.id, 'everyone'); setIsDeleteModalOpen(false); }}
+              >
+                Delete for Everyone
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={() => { executeDelete(messageToDelete.id, 'me'); setIsDeleteModalOpen(false); }}
+            >
+              Delete for Me
+            </Button>
+            <Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+          </>
+        }
+      />
+
+      {/* Forward Modal */}
+      <Dialog
+        isOpen={isForwardModalOpen}
+        onClose={() => setIsForwardModalOpen(false)}
+        title="Forward Message"
+        description="Select a contact to transmit this log."
+      >
+        <div className="space-y-1 max-h-[300px] overflow-y-auto no-scrollbar">
+          {contacts.filter(c => c.id !== user.id).map(contact => (
+            <button
+              key={contact.id}
+              className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors text-left"
+              onClick={() => handleForwardMessage(contact)}
+            >
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
+                {contact.avatarUrl ? <img src={contact.avatarUrl} className="w-full h-full object-cover rounded-full" /> : contact.email[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-medium">{contact.username || contact.email}</p>
+                <p className="text-xs text-muted-foreground">Active Operative</p>
+              </div>
+            </button>
+          ))}
+          {contacts.length === 0 && <p className="text-center py-8 text-sm text-muted-foreground">No contacts found to forward to.</p>}
+        </div>
+      </Dialog>
     </div>
   );
 }
