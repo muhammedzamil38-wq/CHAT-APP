@@ -160,8 +160,8 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
 
   const fetchContacts = async () => {
     try {
-      const res = await api.get('/api/users/friends');
-      setContacts(res.data || []);
+      const res = await api.get('/api/users');
+      setContacts(res.data.users || []);
     } catch (error) {
       console.error('Failed to fetch contacts', error);
     }
