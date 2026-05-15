@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserMinus, Shield, ShieldAlert, LogOut, Settings, Camera, Save } from 'lucide-react';
+import { X, UserMinus, Shield, ShieldAlert, LogOut, Settings, Camera, Save, UserPlus, Search } from 'lucide-react';
 import { Dialog } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -10,8 +10,10 @@ import { useAuth } from '../contexts/AuthContext';
 export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
   const { user } = useAuth();
   const [members, setMembers] = useState([]);
+  const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
   const [name, setName] = useState(group?.name || '');
   const [avatarUrl, setAvatarUrl] = useState(group?.avatar_url || '');
   const [permissions, setPermissions] = useState(group?.permissions || { allow_member_edit: true });
@@ -22,11 +24,21 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
   useEffect(() => {
     if (isOpen && group) {
       fetchMembers();
+      fetchFriends();
       setName(group.name);
       setAvatarUrl(group.avatar_url || '');
       setPermissions(group.permissions || { allow_member_edit: true });
     }
   }, [isOpen, group]);
+
+  const fetchFriends = async () => {
+    try {
+      const res = await api.get('/api/users');
+      setFriends(res.data.users || []);
+    } catch (error) {
+      console.error("Failed to fetch friends", error);
+    }
+  };
 
   const fetchMembers = async () => {
     try {
@@ -59,6 +71,17 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
       toast.success("Operative removed from group.");
     } catch (error) {
       toast.error("Failed to remove operative.");
+    }
+  };
+
+  const handleAddMember = async (userId) => {
+    try {
+      await api.post(`/api/groups/${group.id}/members`, { userId });
+      fetchMembers();
+      setShowAddMember(false);
+      toast.success("Operative added to group.");
+    } catch (error) {
+      toast.error("Failed to add operative.");
     }
   };
 
@@ -118,18 +141,6 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
                 placeholder="Avatar URL"
                 className="text-xs"
               />
-              {isAdmin && (
-                <div className="flex items-center justify-center gap-2 py-2">
-                  <input 
-                    type="checkbox" 
-                    id="allow_edit"
-                    checked={permissions.allow_member_edit}
-                    onChange={(e) => setPermissions(p => ({ ...p, allow_member_edit: e.target.checked }))}
-                    className="w-4 h-4 rounded border-primary bg-background"
-                  />
-                  <label htmlFor="allow_edit" className="text-xs text-muted-foreground">Allow members to edit name/avatar</label>
-                </div>
-              )}
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" className="flex-1" onClick={() => setIsEditing(false)}>Cancel</Button>
                 <Button size="sm" className="flex-1" onClick={handleUpdate}>Save Changes</Button>
@@ -143,10 +154,78 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
           )}
         </div>
 
+        {/* Group Permissions Section */}
+        {isAdmin && (
+          <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/10">
+            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <ShieldAlert className="w-3 h-3 text-primary" />
+              Group Permissions
+            </h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium">Allow Member Edits</p>
+                  <p className="text-[10px] text-muted-foreground">Members can change name/avatar</p>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={permissions.allow_member_edit}
+                  onChange={(e) => {
+                    const newPerms = { ...permissions, allow_member_edit: e.target.checked };
+                    setPermissions(newPerms);
+                    // Autosave for permissions
+                    api.put(`/api/groups/${group.id}`, { permissions: newPerms });
+                  }}
+                  className="w-4 h-4 rounded border-primary bg-background"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Member List */}
         <div className="space-y-3">
-          <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/40 pb-2">Member Manifest</h4>
-          <div className="max-h-[250px] overflow-y-auto pr-2 no-scrollbar space-y-2">
+          <div className="flex items-center justify-between border-b border-border/40 pb-2">
+            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Member Manifest</h4>
+            {isAdmin && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 px-2 text-[10px] text-primary hover:bg-primary/10"
+                onClick={() => setShowAddMember(!showAddMember)}
+              >
+                {showAddMember ? 'Cancel' : <><UserPlus className="w-3 h-3 mr-1" /> Add Member</>}
+              </Button>
+            )}
+          </div>
+
+          {showAddMember && (
+            <div className="space-y-2 p-2 bg-primary/5 rounded-xl border border-primary/20 animate-in slide-in-from-top-2">
+              <p className="text-[10px] font-bold text-primary uppercase px-1">Available Operatives</p>
+              <div className="max-h-[150px] overflow-y-auto no-scrollbar space-y-1">
+                {friends.filter(f => !members.some(m => m.id === f.id)).map(friend => (
+                  <button
+                    key={friend.id}
+                    className="w-full flex items-center justify-between p-2 hover:bg-white/5 rounded-lg transition-colors text-left"
+                    onClick={() => handleAddMember(friend.id)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-[10px] text-primary">
+                        {friend.avatarUrl ? <img src={friend.avatarUrl} className="w-full h-full object-cover rounded-full" /> : friend.email[0].toUpperCase()}
+                      </div>
+                      <p className="text-xs font-medium">{friend.username || friend.email}</p>
+                    </div>
+                    <UserPlus className="w-3 h-3 text-primary" />
+                  </button>
+                ))}
+                {friends.filter(f => !members.some(m => m.id === f.id)).length === 0 && (
+                  <p className="text-center py-4 text-[10px] text-muted-foreground">All contacts are already deployed here.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="max-h-[200px] overflow-y-auto pr-2 no-scrollbar space-y-2">
             {members.map(member => (
               <div key={member.id} className="flex items-center justify-between group/member">
                 <div className="flex items-center gap-3">
