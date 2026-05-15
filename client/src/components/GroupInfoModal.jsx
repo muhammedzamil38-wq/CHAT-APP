@@ -75,7 +75,7 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
     try {
       const res = await api.put(`/api/groups/${group.id}`, {
         name,
-        avatarUrl,
+        avatar_url: avatarUrl,
         permissions
       });
       toast.success("Group intelligence updated.");
@@ -166,9 +166,19 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
               </div>
             </div>
           ) : (
-            <div>
+            <div className="group/name relative px-8">
               <h3 className="text-xl font-bold">{group.name}</h3>
               <p className="text-xs text-muted-foreground uppercase tracking-widest">{members.length} Operatives Active</p>
+              {canEdit && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 absolute right-0 top-0 opacity-0 group-hover/name:opacity-100 transition-opacity"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+              )}
             </div>
           )}
         </div>

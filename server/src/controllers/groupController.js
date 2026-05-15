@@ -4,10 +4,10 @@ import { AppError } from "../utils/errors.js";
 
 export const groupController = {
   createGroup: async (req, res) => {
-    const { name, memberIds, avatarUrl } = req.body;
+    const { name, memberIds, avatar_url } = req.body;
     if (!name) throw new AppError("Group name is required.", 400);
     
-    const group = await groupRepository.create(name, req.user.id, memberIds, avatarUrl);
+    const group = await groupRepository.create(name, req.user.id, memberIds, avatar_url);
     res.status(201).json({ group, message: "Group established." });
   },
 
@@ -28,7 +28,7 @@ export const groupController = {
 
   updateGroup: async (req, res) => {
     const { id } = req.params;
-    const { name, avatarUrl, permissions } = req.body;
+    const { name, avatar_url, permissions } = req.body;
     
     const isAdmin = await groupRepository.isAdmin(Number(id), req.user.id);
     const group = await groupRepository.findById(Number(id));
@@ -37,7 +37,7 @@ export const groupController = {
       throw new AppError("Only commanders can modify group parameters.", 403);
     }
 
-    const updated = await groupRepository.updateGroup(Number(id), { name, avatarUrl, permissions });
+    const updated = await groupRepository.updateGroup(Number(id), { name, avatar_url, permissions });
     res.status(200).json({ group: updated, message: "Group settings updated." });
   },
 

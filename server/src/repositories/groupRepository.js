@@ -1,14 +1,14 @@
 import { pool } from "../config/db.js";
 
 export const groupRepository = {
-  create: async (name, createdBy, memberIds = [], avatarUrl = null) => {
+  create: async (name, createdBy, memberIds = [], avatar_url = null) => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       
       const groupRes = await client.query(
         `INSERT INTO groups (name, created_by, avatar_url) VALUES ($1, $2, $3) RETURNING *`,
-        [name, createdBy, avatarUrl]
+        [name, createdBy, avatar_url]
       );
       const group = groupRes.rows[0];
 
@@ -82,7 +82,7 @@ export const groupRepository = {
     );
   },
 
-  updateGroup: async (groupId, { name, avatarUrl, permissions }) => {
+  updateGroup: async (groupId, { name, avatar_url, permissions }) => {
     const result = await pool.query(
       `UPDATE groups 
        SET name = COALESCE($1, name), 
@@ -90,7 +90,7 @@ export const groupRepository = {
            permissions = COALESCE($3, permissions)
        WHERE id = $4 
        RETURNING *`,
-      [name, avatarUrl, permissions, groupId]
+      [name, avatar_url, permissions, groupId]
     );
     return result.rows[0];
   },

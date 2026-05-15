@@ -68,7 +68,7 @@ export function CreateGroupModal({ isOpen, onClose, onCreated }) {
       const res = await api.post('/api/groups', {
         name: groupName,
         memberIds: selectedMembers,
-        avatarUrl
+        avatar_url: avatarUrl
       });
       toast.success("Group established successfully.");
       onCreated(res.data.group);
