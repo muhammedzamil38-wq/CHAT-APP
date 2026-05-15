@@ -46,7 +46,11 @@ export const groupController = {
     const { userId } = req.body;
     
     const isAdmin = await groupRepository.isAdmin(Number(id), req.user.id);
-    if (!isAdmin) throw new AppError("Only commanders can add new operatives.", 403);
+    const group = await groupRepository.findById(Number(id));
+    
+    if (!isAdmin && !group.permissions.allow_member_add) {
+      throw new AppError("Unauthorized attempt to add operative. Permission denied.", 403);
+    }
 
     await groupRepository.addMember(Number(id), userId);
     res.status(200).json({ message: "Operative added to the group." });

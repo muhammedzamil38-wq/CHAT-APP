@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Users, Check } from 'lucide-react';
+import { X, Search, Users, Check, Camera, Loader2 } from 'lucide-react';
 import { Dialog } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -12,6 +12,8 @@ export function CreateGroupModal({ isOpen, onClose, onCreated }) {
   const [contacts, setContacts] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -36,6 +38,27 @@ export function CreateGroupModal({ isOpen, onClose, onCreated }) {
     );
   };
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const uploadRes = await api.post('/api/files/process', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setAvatarUrl(uploadRes.data.media.secure_url);
+      toast.success('Portrait processed.');
+    } catch (error) {
+      toast.error('Upload failed.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!groupName.trim()) return toast.error("Group name is required.");
     if (selectedMembers.length === 0) return toast.error("Select at least one operative.");
@@ -44,7 +67,8 @@ export function CreateGroupModal({ isOpen, onClose, onCreated }) {
     try {
       const res = await api.post('/api/groups', {
         name: groupName,
-        memberIds: selectedMembers
+        memberIds: selectedMembers,
+        avatarUrl
       });
       toast.success("Group established successfully.");
       onCreated(res.data.group);
@@ -52,6 +76,7 @@ export function CreateGroupModal({ isOpen, onClose, onCreated }) {
       // Reset state
       setGroupName('');
       setSelectedMembers([]);
+      setAvatarUrl('');
     } catch (error) {
       toast.error("Failed to create group.");
     } finally {
@@ -71,6 +96,27 @@ export function CreateGroupModal({ isOpen, onClose, onCreated }) {
       description="Create a secure channel for multiple operatives."
     >
       <div className="space-y-4 py-2">
+        {/* Avatar Upload */}
+        <div className="flex justify-center">
+          <div className="relative group">
+            <div className="w-20 h-20 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center overflow-hidden">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <Users className="w-8 h-8 text-primary/40" />
+              )}
+              {isUploading && (
+                <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                </div>
+              )}
+            </div>
+            <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-full">
+              <Camera className="w-6 h-6 text-white" />
+              <input type="file" hidden accept="image/*" onChange={handleAvatarUpload} disabled={isUploading} />
+            </label>
+          </div>
+        </div>
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-muted-foreground">Group Name</label>
           <Input 

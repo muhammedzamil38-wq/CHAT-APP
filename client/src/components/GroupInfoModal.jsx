@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserMinus, Shield, ShieldAlert, LogOut, Settings, Camera, Save, UserPlus, Search } from 'lucide-react';
+import { X, UserMinus, Shield, ShieldAlert, LogOut, Settings, Camera, Save, UserPlus, Search, Loader2 } from 'lucide-react';
 import { Dialog } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -12,11 +12,12 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
   const [members, setMembers] = useState([]);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [name, setName] = useState(group?.name || '');
   const [avatarUrl, setAvatarUrl] = useState(group?.avatar_url || '');
-  const [permissions, setPermissions] = useState(group?.permissions || { allow_member_edit: true });
+  const [permissions, setPermissions] = useState(group?.permissions || { allow_member_edit: true, allow_member_add: false });
 
   const isAdmin = members.find(m => m.id === user.id)?.role === 'admin';
   const canEdit = isAdmin || permissions.allow_member_edit;
@@ -27,7 +28,7 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
       fetchFriends();
       setName(group.name);
       setAvatarUrl(group.avatar_url || '');
-      setPermissions(group.permissions || { allow_member_edit: true });
+      setPermissions(group.permissions || { allow_member_edit: true, allow_member_add: false });
     }
   }, [isOpen, group]);
 
@@ -46,6 +47,27 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
       setMembers(res.data.members || []);
     } catch (error) {
       toast.error("Failed to fetch member manifest.");
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const uploadRes = await api.post('/api/files/process', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setAvatarUrl(uploadRes.data.media.secure_url);
+      toast.success('Group portrait processed.');
+    } catch (error) {
+      toast.error('Portrait upload failed.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -110,20 +132,23 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
         {/* Header / Edit Section */}
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="relative group">
-            <div className="w-24 h-24 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center overflow-hidden">
+            <div className="w-24 h-24 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center overflow-hidden relative">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <Settings className="w-10 h-10 text-primary/40" />
               )}
+              {isUploading && (
+                <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                </div>
+              )}
             </div>
             {canEdit && (
-              <button 
-                className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full"
-                onClick={() => setIsEditing(true)}
-              >
+              <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full cursor-pointer">
                 <Camera className="w-6 h-6 text-white" />
-              </button>
+                <input type="file" hidden accept="image/*" onChange={handleAvatarUpload} disabled={isUploading} />
+              </label>
             )}
           </div>
 
@@ -134,12 +159,6 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
                 onChange={(e) => setName(e.target.value)} 
                 placeholder="Group Name"
                 className="text-center font-bold h-10"
-              />
-              <Input 
-                value={avatarUrl} 
-                onChange={(e) => setAvatarUrl(e.target.value)} 
-                placeholder="Avatar URL"
-                className="text-xs"
               />
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" className="flex-1" onClick={() => setIsEditing(false)}>Cancel</Button>
@@ -173,7 +192,22 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
                   onChange={(e) => {
                     const newPerms = { ...permissions, allow_member_edit: e.target.checked };
                     setPermissions(newPerms);
-                    // Autosave for permissions
+                    api.put(`/api/groups/${group.id}`, { permissions: newPerms });
+                  }}
+                  className="w-4 h-4 rounded border-primary bg-background"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium">Allow Member Additions</p>
+                  <p className="text-[10px] text-muted-foreground">Members can add new operatives</p>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={permissions.allow_member_add}
+                  onChange={(e) => {
+                    const newPerms = { ...permissions, allow_member_add: e.target.checked };
+                    setPermissions(newPerms);
                     api.put(`/api/groups/${group.id}`, { permissions: newPerms });
                   }}
                   className="w-4 h-4 rounded border-primary bg-background"
@@ -187,7 +221,7 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
         <div className="space-y-3">
           <div className="flex items-center justify-between border-b border-border/40 pb-2">
             <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Member Manifest</h4>
-            {isAdmin && (
+            {(isAdmin || permissions.allow_member_add) && (
               <Button 
                 variant="ghost" 
                 size="sm" 
