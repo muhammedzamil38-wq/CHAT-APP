@@ -355,9 +355,18 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                 ${(m.isDeleted || m.isLocallyDeleted) ? 'opacity-50 italic' : ''}
               `}>
                 {selectedUser.isGroup && m.senderId !== user.id && (
-                  <p className="text-[10px] font-bold text-primary mb-1 opacity-80">
-                    {m.senderName || 'Operative'}
-                  </p>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden shrink-0">
+                      {m.senderAvatar ? (
+                        <img src={m.senderAvatar} alt="Sender" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[8px] font-bold text-primary">{(m.senderName || 'O')[0].toUpperCase()}</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] font-bold text-primary opacity-90">
+                      {m.senderName || 'Operative'}
+                    </p>
+                  </div>
                 )}
                 {m.replyToId && (
                   <div className={`

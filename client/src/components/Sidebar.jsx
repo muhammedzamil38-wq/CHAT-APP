@@ -124,8 +124,23 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
 
   return (
     <div className="w-80 border-r border-border/40 bg-card/30 backdrop-blur-xl flex flex-col h-full shrink-0">
-      <div className="p-4 border-b border-border/40 flex items-center justify-between">
-        <h2 className="text-xl font-semibold tracking-tight">Gossip</h2>
+      <div className="p-4 border-b border-border/40 flex items-center justify-between bg-white/5">
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={onOpenSettings}>
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary overflow-hidden">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="My Avatar" className="w-full h-full object-cover" />
+              ) : (
+                (user?.username || user?.email || 'U')[0].toUpperCase()
+              )}
+            </div>
+            <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-card rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold truncate group-hover:text-primary transition-colors">{user?.username || 'Operative'}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Online</p>
+          </div>
+        </div>
         <div className="flex gap-1">
           {user?.role === 'admin' && (
             <Button 
@@ -146,9 +161,6 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
             title="Mission Settings"
           >
             <Settings className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="More Options">
-            <MoreVertical className="h-4 w-4" />
           </Button>
         </div>
       </div>
