@@ -7,13 +7,17 @@ import { toast } from 'sonner';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import { AdminModal } from './AdminModal';
+import { CreateGroupModal } from './CreateGroupModal';
+import { Users, Plus } from 'lucide-react';
 
 export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
   const [contacts, setContacts] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const { socket, onlineUsers, triggerNotification } = useSocket();
   const { user } = useAuth();
 
@@ -30,13 +34,25 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
       })));
     } catch (error) {
       console.error('Failed to fetch users', error);
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchGroups = async () => {
+    try {
+      const res = await api.get('/api/groups');
+      setGroups(res.data?.groups || []);
+    } catch (error) {
+      console.error('Failed to fetch groups', error);
     }
   };
 
   useEffect(() => {
-    fetchFriends();
+    const init = async () => {
+      setLoading(true);
+      await Promise.all([fetchFriends(), fetchGroups()]);
+      setLoading(false);
+    };
+    init();
   }, []);
 
   // Listen for incoming messages to update unread counts
@@ -185,8 +201,41 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar">
-        <div className="px-4 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Your Contacts</div>
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-20">
+        <div className="px-4 py-2 flex items-center justify-between group">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Group Uplinks</span>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 rounded-md opacity-0 group-hover:opacity-100 transition-opacity" 
+            onClick={() => setShowCreateGroup(true)}
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+        {groups.map((group) => (
+          <div 
+            key={`group_${group.id}`} 
+            onClick={() => onSelectUser({ ...group, isGroup: true })}
+            className={`flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-border/10 ${selectedUser?.id === group.id && selectedUser?.isGroup ? 'bg-white/5' : ''}`}
+          >
+            <div className="relative shrink-0">
+              <div className="w-12 h-12 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center font-bold text-primary overflow-hidden">
+                {group.avatar_url ? (
+                  <img src={group.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <Users className="w-6 h-6" />
+                )}
+              </div>
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-medium truncate">{group.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{group.lastMessage || 'Channel established.'}</p>
+            </div>
+          </div>
+        ))}
+
+        <div className="px-4 py-2 mt-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Individual Operatives</div>
         {loading ? (
           <div className="p-4 text-center text-muted-foreground text-sm italic">Initializing telemetry...</div>
         ) : contacts.length === 0 ? (
@@ -199,7 +248,7 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
             <div 
               key={contact.id} 
               onClick={() => onSelectUser(contact)}
-              className={`flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-border/10 ${selectedUser?.id === contact.id ? 'bg-white/5' : ''}`}
+              className={`flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-border/10 ${selectedUser?.id === contact.id && !selectedUser?.isGroup ? 'bg-white/5' : ''}`}
             >
               <div className="relative shrink-0">
                 <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-semibold text-primary overflow-hidden">
@@ -236,6 +285,15 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
       {showAdminModal && (
         <AdminModal onClose={() => setShowAdminModal(false)} />
       )}
+
+      <CreateGroupModal 
+        isOpen={showCreateGroup} 
+        onClose={() => setShowCreateGroup(false)} 
+        onCreated={(newGroup) => {
+          setGroups(prev => [newGroup, ...prev]);
+          onSelectUser({ ...newGroup, isGroup: true });
+        }}
+      />
     </div>
   );
 }

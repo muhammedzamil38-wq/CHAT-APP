@@ -14,7 +14,9 @@ import { api } from '../lib/api';
 import { ImageEditorModal } from './ImageEditorModal';
 import { EmojiPicker } from './EmojiPicker';
 import { UserInfoModal } from './UserInfoModal';
+import { GroupInfoModal } from './GroupInfoModal';
 import { Dialog } from './ui/dialog';
+import { Users } from 'lucide-react';
 
 export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [messages, setMessages] = useState([]);
@@ -26,6 +28,7 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [editingMessage, setEditingMessage] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
   const fileInputRef = useRef(null);
   
   // File states
@@ -44,7 +47,17 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const handleMessage = (message) => {
-    // Only show messages if they belong to this conversation
+    // Only show messages if they belong to this conversation/group
+    if (selectedUser.isGroup) {
+      if (Number(message.groupId) === Number(selectedUser.id)) {
+        setMessages((prev) => {
+          if (prev.some(m => Number(m.id) === Number(message.id))) return prev;
+          return [...prev, message];
+        });
+      }
+      return;
+    }
+
     const isFromMe = Number(message.senderId) === Number(user?.id) && Number(message.to) === Number(selectedUser?.id);
     const isToMe = Number(message.senderId) === Number(selectedUser?.id) && Number(message.to) === Number(user?.id);
     
@@ -86,7 +99,10 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const res = await api.get(`/api/messages/${selectedUser.id}`);
+        const endpoint = selectedUser.isGroup 
+          ? `/api/messages/group/${selectedUser.id}` 
+          : `/api/messages/${selectedUser.id}`;
+        const res = await api.get(endpoint);
         setMessages(res.data?.messages || []);
       } catch (error) {
         console.error('Failed to fetch messages', error);
@@ -266,16 +282,22 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
             </Button>
           )}
           <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-semibold text-primary text-sm overflow-hidden">
-            {selectedUser.avatarUrl ? (
-              <img src={selectedUser.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            {selectedUser.isGroup ? (
+              selectedUser.avatar_url ? <img src={selectedUser.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : <Users className="w-5 h-5" />
             ) : (
-              selectedUser.email[0].toUpperCase()
+              selectedUser.avatarUrl ? (
+                <img src={selectedUser.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                selectedUser.email[0].toUpperCase()
+              )
             )}
           </div>
           <div className="min-w-0">
-            <h2 className="font-semibold text-sm truncate max-w-[120px] md:max-w-none">{selectedUser.username || selectedUser.email}</h2>
+            <h2 className="font-semibold text-sm truncate max-w-[120px] md:max-w-none">{selectedUser.name || selectedUser.username || selectedUser.email}</h2>
             <p className="text-[10px] md:text-xs text-muted-foreground flex items-center gap-1">
-              {onlineUsers.includes(String(selectedUser.id)) ? (
+              {selectedUser.isGroup ? (
+                'Secure Group Channel'
+              ) : onlineUsers.includes(String(selectedUser.id)) ? (
                 <>
                   <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-500 block animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
                   Online
@@ -312,8 +334,8 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
             variant="ghost" 
             size="icon" 
             className="hover:text-foreground rounded-full hover:bg-white/10" 
-            title="User Info"
-            onClick={() => setShowUserInfo(true)}
+            title="Channel Info"
+            onClick={() => selectedUser.isGroup ? setShowGroupInfo(true) : setShowUserInfo(true)}
           >
             <Info className="w-5 h-5" />
           </Button>
@@ -332,13 +354,18 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                   : 'bg-secondary/60 dark:bg-[#2a2a2a] text-foreground rounded-tl-none border-border/40 dark:border-white/5'}
                 ${(m.isDeleted || m.isLocallyDeleted) ? 'opacity-50 italic' : ''}
               `}>
+                {selectedUser.isGroup && m.senderId !== user.id && (
+                  <p className="text-[10px] font-bold text-primary mb-1 opacity-80">
+                    {m.senderName || 'Operative'}
+                  </p>
+                )}
                 {m.replyToId && (
                   <div className={`
                     mb-2 p-2 rounded-lg border-l-4 text-xs bg-black/10 dark:bg-white/5 
                     ${m.senderId === user.id ? 'border-white/30' : 'border-primary/50'}
                   `}>
                     <p className="font-bold opacity-60 mb-1">
-                      {m.replyToSenderId === user.id ? 'You' : (selectedUser.username || selectedUser.email)}
+                      {m.replyToSenderId === user.id ? 'You' : (m.replyToSenderName || selectedUser.username || selectedUser.email)}
                     </p>
                     <p className="truncate italic">{m.replyToText || 'Original message not found'}</p>
                   </div>
@@ -477,6 +504,17 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
         user={selectedUser} 
         isOpen={showUserInfo} 
         onClose={() => setShowUserInfo(false)} 
+      />
+
+      <GroupInfoModal
+        isOpen={showGroupInfo}
+        onClose={() => setShowGroupInfo(false)}
+        group={selectedUser}
+        onUpdate={(updatedGroup) => {
+          // This should update the group in the sidebar too, but for now we update local state
+          // In a real app we'd use a global state or refetch.
+          window.location.reload(); 
+        }}
       />
 
       {/* Delete Modal */}

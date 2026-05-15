@@ -2,6 +2,8 @@ import { Server } from "socket.io";
 import { env } from "./config/env.js";
 import { logMission } from "./utils/logger.js";
 import { messageRepository } from "./repositories/messageRepository.js";
+import { groupRepository } from "./repositories/groupRepository.js";
+import { userRepository } from "./repositories/userRepository.js";
 
 let io;
 const userSocketMap = {}; // {userId: Set(socketIds)}
@@ -39,11 +41,15 @@ export const initializeSocket = (httpServer) => {
     logMission(`Socket uplink established: ${socket.id}`);
 
     // Join a room specific to the user ID and track online status
-    socket.on("identify", (userId) => {
+    socket.on("identify", async (userId) => {
       if (!userId) return;
       const uid = String(userId);
       socket.join(`user_${uid}`);
       
+      // Join all group rooms the user belongs to
+      const groups = await groupRepository.findUserGroups(Number(userId));
+      groups.forEach(g => socket.join(`group_${g.id}`));
+
       if (!userSocketMap[uid]) {
         userSocketMap[uid] = new Set();
       }
@@ -60,11 +66,6 @@ export const initializeSocket = (httpServer) => {
         const rId = Number(to);
         const savedMessage = await messageRepository.save(sId, rId, text, fileUrl, fileType, fileName, replyToId, isForwarded);
         
-        // If it's a reply, we might want to fetch the replyToText if the repository didn't return it
-        // But our updated save already returns the base fields. 
-        // For the real-time event, we can append the replyToText manually if needed or just let the frontend handle it if it has the history.
-        // Actually, let's make it consistent.
-        
         io.to(`user_${to}`).emit("receive_message", savedMessage);
         io.to(`user_${senderId}`).emit("receive_message", savedMessage);
     } catch (error) {
@@ -72,14 +73,37 @@ export const initializeSocket = (httpServer) => {
     }
     });
 
+    socket.on("group_message", async ({ groupId, text, senderId, fileUrl, fileType, fileName, replyToId, isForwarded }) => {
+      try {
+        const sId = Number(senderId);
+        const gId = Number(groupId);
+        const savedMessage = await messageRepository.save(sId, null, text, fileUrl, fileType, fileName, replyToId, isForwarded, gId);
+        
+        // Fetch sender details for the group broadcast
+        const sender = await userRepository.findById(sId);
+        savedMessage.senderName = sender.username || sender.email;
+        savedMessage.senderAvatar = sender.avatarUrl;
+
+        io.to(`group_${groupId}`).emit("receive_message", savedMessage);
+      } catch (error) {
+        console.error("[MISSION-CONTROL][SOCKET-ERROR] Failed to save/emit group message:", error.message);
+      }
+    });
+
+    socket.on("group_update", (data) => {
+      io.to(`group_${data.groupId}`).emit("group_update", data);
+    });
+
     socket.on("message_edited", (message) => {
-      io.to(`user_${message.to}`).emit("message_edited", message);
-      io.to(`user_${message.senderId}`).emit("message_edited", message);
+      const target = message.groupId ? `group_${message.groupId}` : `user_${message.to}`;
+      io.to(target).emit("message_edited", message);
+      if (!message.groupId) io.to(`user_${message.senderId}`).emit("message_edited", message);
     });
 
     socket.on("message_deleted", (updatedMessage) => {
-      io.to(`user_${updatedMessage.to}`).emit("message_deleted", updatedMessage);
-      io.to(`user_${updatedMessage.senderId}`).emit("message_deleted", updatedMessage);
+      const target = updatedMessage.groupId ? `group_${updatedMessage.groupId}` : `user_${updatedMessage.to}`;
+      io.to(target).emit("message_deleted", updatedMessage);
+      if (!updatedMessage.groupId) io.to(`user_${updatedMessage.senderId}`).emit("message_deleted", updatedMessage);
     });
 
     // WebRTC Signaling

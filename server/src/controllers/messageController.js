@@ -1,4 +1,5 @@
 import { messageRepository } from "../repositories/messageRepository.js";
+import { groupRepository } from "../repositories/groupRepository.js";
 
 export const messageController = {
   getHistory: async (req, res) => {
@@ -19,6 +20,22 @@ export const messageController = {
       });
     } catch (error) {
       console.error(`[MISSION-CONTROL][ERROR] History sync failed:`, error);
+      throw error;
+    }
+  },
+
+  getGroupHistory: async (req, res) => {
+    const { groupId } = req.params;
+    const myId = Number(req.user.id);
+    
+    try {
+      const isMember = await groupRepository.isMember(Number(groupId), myId);
+      if (!isMember) throw new AppError("Unauthorized access to group telemetry.", 403);
+
+      const messages = await messageRepository.getGroupConversation(Number(groupId), myId);
+      res.status(200).json({ messages });
+    } catch (error) {
+      console.error(`[MISSION-CONTROL][ERROR] Group history sync failed:`, error);
       throw error;
     }
   },

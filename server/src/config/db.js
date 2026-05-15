@@ -101,6 +101,31 @@ export const initializeDatabase = async () => {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS groups (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      avatar_url TEXT,
+      created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      permissions JSONB DEFAULT '{"allow_member_edit": true}'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS group_members (
+      id SERIAL PRIMARY KEY,
+      group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role VARCHAR(50) DEFAULT 'member',
+      joined_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(group_id, user_id)
+    )
+  `);
+
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE`);
+  await pool.query(`ALTER TABLE messages ALTER COLUMN recipient_id DROP NOT NULL`);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS reports (
       id SERIAL PRIMARY KEY,
       reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -110,5 +135,5 @@ export const initializeDatabase = async () => {
     )
   `);
 
-  logMission("Database telemetry online. Tables verified.");
+  logMission("Group Chat telemetry online. Tables verified.");
 };
