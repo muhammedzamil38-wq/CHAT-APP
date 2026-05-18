@@ -2,18 +2,60 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { ChatArea } from '../components/ChatArea';
 import { SettingsModal } from '../components/SettingsModal';
+import { useSocket } from '../contexts/SocketContext';
 import { CallOverlay } from '../components/CallOverlay';
 
 export function Dashboard() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const { socket } = useSocket();
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleProfileUpdate = (updatedUser) => {
+      setSelectedUser(prev => {
+        if (prev && !prev.isGroup && Number(prev.id) === Number(updatedUser.userId)) {
+          return { 
+            ...prev, 
+            username: updatedUser.username, 
+            avatarUrl: updatedUser.avatarUrl, 
+            bio: updatedUser.bio 
+          };
+        }
+        return prev;
+      });
+    };
+
+    const handleGroupUpdate = (updatedGroup) => {
+      setSelectedUser(prev => {
+        if (prev && prev.isGroup && Number(prev.id) === Number(updatedGroup.groupId)) {
+          return { 
+            ...prev, 
+            name: updatedGroup.name, 
+            avatar_url: updatedGroup.avatar_url, 
+            permissions: updatedGroup.permissions 
+          };
+        }
+        return prev;
+      });
+    };
+
+    socket.on('user_profile_updated', handleProfileUpdate);
+    socket.on('group_updated', handleGroupUpdate);
+
+    return () => {
+      socket.off('user_profile_updated', handleProfileUpdate);
+      socket.off('group_updated', handleGroupUpdate);
+    };
+  }, [socket]);
 
   return (
     <div className="h-screen w-screen bg-background overflow-hidden text-foreground flex relative">

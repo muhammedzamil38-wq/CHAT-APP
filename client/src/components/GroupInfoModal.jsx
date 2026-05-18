@@ -62,8 +62,17 @@ export function GroupInfoModal({ isOpen, onClose, group, onUpdate }) {
       const uploadRes = await api.post('/api/files/process', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setAvatarUrl(uploadRes.data.media.secure_url);
-      toast.success('Group portrait processed.');
+      const newAvatarUrl = uploadRes.data.media.secure_url;
+      setAvatarUrl(newAvatarUrl);
+
+      // Immediately save to the database
+      const res = await api.put(`/api/groups/${group.id}`, {
+        name: name || group.name,
+        avatar_url: newAvatarUrl,
+        permissions
+      });
+      toast.success('Group portrait updated.');
+      onUpdate(res.data.group);
     } catch (error) {
       toast.error('Portrait upload failed.');
     } finally {

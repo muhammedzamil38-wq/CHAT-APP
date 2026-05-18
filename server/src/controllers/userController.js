@@ -25,6 +25,16 @@ export const userController = {
   updateProfile: async (req, res) => {
     const { username, bio, avatarUrl } = req.body;
     const user = await userRepository.updateProfile(req.user.id, { username, bio, avatarUrl });
+    
+    import('../socket.js').then(({ emitMissionEvent }) => {
+      emitMissionEvent("user_profile_updated", { 
+        userId: user.id, 
+        username: user.username, 
+        avatarUrl: user.avatarUrl, 
+        bio: user.bio 
+      });
+    });
+
     res.status(200).json({ user, message: "Mission identity updated." });
   },
 

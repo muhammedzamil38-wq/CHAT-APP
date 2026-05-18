@@ -38,6 +38,16 @@ export const groupController = {
     }
 
     const updated = await groupRepository.updateGroup(Number(id), { name, avatar_url, permissions });
+    
+    import('../socket.js').then(({ emitMissionEvent }) => {
+      emitMissionEvent("group_updated", {
+        groupId: updated.id,
+        name: updated.name,
+        avatar_url: updated.avatar_url,
+        permissions: updated.permissions
+      });
+    });
+
     res.status(200).json({ group: updated, message: "Group settings updated." });
   },
 

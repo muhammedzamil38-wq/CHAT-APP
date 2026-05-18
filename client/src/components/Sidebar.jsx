@@ -77,8 +77,44 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
       }
     };
 
+    const handleProfileUpdate = (updatedUser) => {
+      setContacts(prev => prev.map(c => {
+        if (Number(c.id) === Number(updatedUser.userId)) {
+          return { 
+            ...c, 
+            username: updatedUser.username, 
+            avatarUrl: updatedUser.avatarUrl, 
+            bio: updatedUser.bio,
+            avatar: updatedUser.avatarUrl ? undefined : (updatedUser.username || c.email || 'O')[0].toUpperCase()
+          };
+        }
+        return c;
+      }));
+    };
+
+    const handleGroupUpdate = (updatedGroup) => {
+      setGroups(prev => prev.map(g => {
+        if (Number(g.id) === Number(updatedGroup.groupId)) {
+          return { 
+            ...g, 
+            name: updatedGroup.name, 
+            avatar_url: updatedGroup.avatar_url, 
+            permissions: updatedGroup.permissions 
+          };
+        }
+        return g;
+      }));
+    };
+
     socket.on('receive_message', handleNewMessage);
-    return () => socket.off('receive_message', handleNewMessage);
+    socket.on('user_profile_updated', handleProfileUpdate);
+    socket.on('group_updated', handleGroupUpdate);
+    
+    return () => {
+      socket.off('receive_message', handleNewMessage);
+      socket.off('user_profile_updated', handleProfileUpdate);
+      socket.off('group_updated', handleGroupUpdate);
+    };
   }, [socket, selectedUser, contacts]);
 
   // Reset unread count when a user is selected

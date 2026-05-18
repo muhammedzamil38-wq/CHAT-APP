@@ -86,12 +86,23 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
       setMessages(prev => prev.map(m => Number(m.id) === Number(updatedMessage.id) ? { ...m, ...updatedMessage } : m));
     };
 
+    const handleProfileUpdate = (updatedUser) => {
+      setMessages(prev => prev.map(m => {
+        if (Number(m.senderId) === Number(updatedUser.userId)) {
+          return { ...m, senderAvatar: updatedUser.avatarUrl, senderName: updatedUser.username };
+        }
+        return m;
+      }));
+    };
+
     socket.on('message_deleted', handleDelete);
+    socket.on('user_profile_updated', handleProfileUpdate);
 
     return () => {
       socket.off('receive_message', handleMessage);
       socket.off('message_edited');
       socket.off('message_deleted');
+      socket.off('user_profile_updated', handleProfileUpdate);
     };
   }, [socket, selectedUser, triggerNotification]);
 

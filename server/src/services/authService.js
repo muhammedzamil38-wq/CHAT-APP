@@ -31,7 +31,7 @@ export const authService = {
 
     return {
       token: signToken(user.id),
-      user: { id: user.id, email: user.email, username: user.username, role: user.role }
+      user: { id: user.id, email: user.email, username: user.username, role: user.role, avatarUrl: user.avatarUrl, bio: user.bio }
     };
   },
 
@@ -48,7 +48,7 @@ export const authService = {
 
     return {
       token: signToken(user.id),
-      user: { id: user.id, email: user.email, username: user.username, role: user.role }
+      user: { id: user.id, email: user.email, username: user.username, role: user.role, avatarUrl: user.avatarUrl, bio: user.bio }
     };
   },
 
