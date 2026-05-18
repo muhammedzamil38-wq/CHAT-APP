@@ -26,7 +26,10 @@ export const upload = multer({
       "application/octet-stream" // for generic binaries
     ];
 
-    if (allowedMimeTypes.includes(file.mimetype) || file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
+    if (allowedMimeTypes.includes(file.mimetype) || 
+        file.mimetype.startsWith("image/") || 
+        file.mimetype.startsWith("video/") || 
+        file.mimetype.startsWith("audio/")) {
       cb(null, true);
     } else {
       return cb(new AppError("[MISSION-CONTROL] Payload rejected: unsupported file spectrum.", 400));
