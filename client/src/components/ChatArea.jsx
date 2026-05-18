@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Paperclip, Send, Smile, Phone, Video, Info, MoreVertical, Copy, 
   Edit2, Trash2, Forward, FileIcon, Download, X, ImageIcon, 
-  Loader2, Check, CheckCheck, ChevronLeft, MessageSquare 
+  Loader2, Check, CheckCheck, ChevronLeft, MessageSquare,
+  Mic, Play, Pause, Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
@@ -16,7 +17,91 @@ import { EmojiPicker } from './EmojiPicker';
 import { UserInfoModal } from './UserInfoModal';
 import { GroupInfoModal } from './GroupInfoModal';
 import { Dialog } from './ui/dialog';
-import { Users } from 'lucide-react';
+
+function VoicePlayer({ fileUrl }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+    };
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [fileUrl]);
+
+  const togglePlay = () => {
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch(e => console.error("Audio playback failed", e));
+      setIsPlaying(true);
+    }
+  };
+
+  const handleSeek = (e) => {
+    const time = Number(e.target.value);
+    audioRef.current.currentTime = time;
+    setCurrentTime(time);
+  };
+
+  const formatTime = (time) => {
+    if (isNaN(time)) return '0:00';
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  return (
+    <div className="flex items-center gap-3 p-2 bg-black/10 dark:bg-white/5 rounded-xl border border-white/10 min-w-[200px]">
+      <audio ref={audioRef} src={fileUrl} preload="metadata" />
+      <button 
+        type="button"
+        onClick={togglePlay}
+        className="w-8 h-8 rounded-full bg-primary/20 hover:bg-primary/30 flex items-center justify-center text-primary transition-colors shrink-0 animate-pulse-subtle"
+      >
+        {isPlaying ? <Pause className="w-4 h-4 fill-primary" /> : <Play className="w-4 h-4 fill-primary translate-x-[1px]" />}
+      </button>
+      <div className="flex-1 space-y-1">
+        <input 
+          type="range" 
+          min="0" 
+          max={duration || 100} 
+          value={currentTime} 
+          onChange={handleSeek}
+          className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" 
+        />
+        <div className="flex justify-between text-[10px] text-muted-foreground">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [messages, setMessages] = useState([]);
@@ -30,6 +115,13 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [showUserInfo, setShowUserInfo] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const fileInputRef = useRef(null);
+  
+  // Voice Recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
   
   // File states
   const [pendingFile, setPendingFile] = useState(null); // { file, preview, type }
@@ -139,21 +231,35 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
       if (pendingFile) {
         const formData = new FormData();
         formData.append('file', pendingFile.file);
-        const uploadRes = await api.post('/api/files/upload', formData);
-        fileUrl = uploadRes.data.url;
+        const uploadRes = await api.post('/api/files/process', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        fileUrl = uploadRes.data.media.secure_url;
         fileType = pendingFile.type;
         fileName = pendingFile.file.name;
       }
 
-      socket.emit('private_message', {
-        to: selectedUser.id,
-        text: input,
-        senderId: user.id,
-        fileUrl,
-        fileType,
-        fileName,
-        replyToId: replyingTo?.id
-      });
+      if (selectedUser.isGroup) {
+        socket.emit('group_message', {
+          groupId: selectedUser.id,
+          text: input,
+          senderId: user.id,
+          fileUrl,
+          fileType,
+          fileName,
+          replyToId: replyingTo?.id
+        });
+      } else {
+        socket.emit('private_message', {
+          to: selectedUser.id,
+          text: input,
+          senderId: user.id,
+          fileUrl,
+          fileType,
+          fileName,
+          replyToId: replyingTo?.id
+        });
+      }
 
       setInput('');
       setPendingFile(null);
@@ -168,18 +274,30 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   const handleForwardMessage = async (recipient) => {
     if (!forwardingMessage) return;
     try {
-      socket.emit('private_message', {
-        to: recipient.id,
-        text: forwardingMessage.text,
-        senderId: user.id,
-        fileUrl: forwardingMessage.fileUrl,
-        fileType: forwardingMessage.fileType,
-        fileName: forwardingMessage.fileName,
-        isForwarded: true
-      });
+      if (recipient.isGroup) {
+        socket.emit('group_message', {
+          groupId: recipient.id,
+          text: forwardingMessage.text,
+          senderId: user.id,
+          fileUrl: forwardingMessage.fileUrl,
+          fileType: forwardingMessage.fileType,
+          fileName: forwardingMessage.fileName,
+          isForwarded: true
+        });
+      } else {
+        socket.emit('private_message', {
+          to: recipient.id,
+          text: forwardingMessage.text,
+          senderId: user.id,
+          fileUrl: forwardingMessage.fileUrl,
+          fileType: forwardingMessage.fileType,
+          fileName: forwardingMessage.fileName,
+          isForwarded: true
+        });
+      }
       setIsForwardModalOpen(false);
       setForwardingMessage(null);
-      toast.success(`Message forwarded to ${recipient.username || recipient.email}`);
+      toast.success(`Message forwarded to ${recipient.name || recipient.username || recipient.email}`);
     } catch (error) {
       toast.error("Forwarding failed");
     }
@@ -187,16 +305,128 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
 
   const fetchContacts = async () => {
     try {
-      const res = await api.get('/api/users');
-      setContacts(res.data.users || []);
+      const [usersRes, groupsRes] = await Promise.all([
+        api.get('/api/users'),
+        api.get('/api/groups')
+      ]);
+      const users = (usersRes.data.users || []).map(u => ({ ...u, isGroup: false }));
+      const groups = (groupsRes.data.groups || []).map(g => ({ ...g, isGroup: true, name: g.name }));
+      setContacts([...groups, ...users]);
     } catch (error) {
-      console.error('Failed to fetch contacts', error);
+      console.error('Failed to fetch forwarding targets', error);
     }
   };
 
   const startEdit = (msg) => {
     setEditingMessage(msg);
     setInput(msg.text);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+    } catch (err) {
+      console.error("Microphone access denied or error:", err);
+      toast.error("Could not access microphone.");
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    clearInterval(recordingTimerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+    audioChunksRef.current = [];
+  };
+
+  const sendVoiceNote = async () => {
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') return;
+    
+    clearInterval(recordingTimerRef.current);
+    setIsRecording(false);
+
+    mediaRecorderRef.current.onstop = async () => {
+      if (mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      const audioFile = new File([audioBlob], 'voice_note.webm', { type: 'audio/webm' });
+      
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', audioFile);
+        
+        const uploadRes = await api.post('/api/files/process', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        const fileUrl = uploadRes.data.media.secure_url;
+
+        if (selectedUser.isGroup) {
+          socket.emit('group_message', {
+            groupId: selectedUser.id,
+            text: '🎤 Voice Note',
+            senderId: user.id,
+            fileUrl,
+            fileType: 'audio',
+            fileName: 'Voice Note'
+          });
+        } else {
+          socket.emit('private_message', {
+            to: selectedUser.id,
+            text: '🎤 Voice Note',
+            senderId: user.id,
+            fileUrl,
+            fileType: 'audio',
+            fileName: 'Voice Note'
+          });
+        }
+        
+        toast.success("Voice note sent.");
+      } catch (err) {
+        console.error("Failed to upload/send voice note:", err);
+        toast.error("Failed to deliver voice note.");
+      } finally {
+        setIsUploading(false);
+        setRecordingTime(0);
+        audioChunksRef.current = [];
+      }
+    };
+
+    mediaRecorderRef.current.stop();
+  };
+
+  const formatRecordingTime = (time) => {
+    const mins = Math.floor(time / 60);
+    const secs = time % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   const submitEdit = async (e) => {
@@ -400,6 +630,8 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                   <div className="mb-2 rounded-lg overflow-hidden border border-white/10">
                     {m.fileType === 'image' ? (
                       <img src={m.fileUrl} alt="shared" className="max-h-60 w-full object-cover cursor-pointer" onClick={() => window.open(m.fileUrl)} />
+                    ) : m.fileType === 'audio' ? (
+                      <VoicePlayer fileUrl={m.fileUrl} />
                     ) : (
                       <a href={m.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-3 bg-black/20 hover:bg-black/30 transition-colors" title="Download File">
                         <FileIcon className="w-5 h-5" />
@@ -482,33 +714,55 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
 
         {showEmojiPicker && <EmojiPicker onEmojiSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />}
 
-        <form onSubmit={editingMessage ? submitEdit : handleSendMessage} className="flex items-center gap-2">
-          <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Add Emoji">
-            <Smile className="w-5 h-5" />
-          </Button>
-          <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors" onClick={() => fileInputRef.current.click()} title="Attach File">
-            <Paperclip className="w-5 h-5" />
-          </Button>
-          <input type="file" hidden ref={fileInputRef} onChange={handleFileSelect} />
-          
-          <div className="flex-1 relative">
-            <Input 
-              placeholder={editingMessage ? "Edit message..." : "Type a message..."} 
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="bg-background/50 border-border/50 h-11 pr-10"
-            />
-            {editingMessage && (
-              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => { setEditingMessage(null); setInput(''); }}>
-                <X className="w-4 h-4" />
-              </button>
-            )}
+        {isRecording ? (
+          <div className="flex items-center gap-3 w-full bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-1.5 h-11">
+            <div className="flex items-center gap-2 flex-1">
+              <span className="w-2 h-2 rounded-full bg-destructive animate-ping"></span>
+              <span className="text-xs font-bold text-destructive uppercase tracking-wider">Recording Voice Note</span>
+              <span className="text-sm font-mono font-bold text-foreground ml-auto">{formatRecordingTime(recordingTime)}</span>
+            </div>
+            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full" onClick={cancelRecording} title="Discard">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+            <Button type="button" size="icon" className="h-8 w-8 rounded-full bg-primary hover:bg-primary/95 text-primary-foreground shadow-lg shadow-primary/20" onClick={sendVoiceNote} title="Send Voice Note">
+              <Send className="w-4 h-4" />
+            </Button>
           </div>
+        ) : (
+          <form onSubmit={editingMessage ? submitEdit : handleSendMessage} className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Add Emoji">
+              <Smile className="w-5 h-5" />
+            </Button>
+            <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors" onClick={() => fileInputRef.current.click()} title="Attach File">
+              <Paperclip className="w-5 h-5" />
+            </Button>
+            <input type="file" hidden ref={fileInputRef} onChange={handleFileSelect} />
+            
+            <div className="flex-1 relative">
+              <Input 
+                placeholder={editingMessage ? "Edit message..." : "Type a message..."} 
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="bg-background/50 border-border/50 h-11 pr-10"
+              />
+              {editingMessage && (
+                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => { setEditingMessage(null); setInput(''); }}>
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
 
-          <Button type="submit" size="icon" className="h-11 w-11 rounded-xl shadow-lg shadow-primary/20" disabled={isUploading || (!input.trim() && !pendingFile)} title="Send Message">
-            {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          </Button>
-        </form>
+            {(!input.trim() && !pendingFile && !editingMessage) ? (
+              <Button type="button" size="icon" className="h-11 w-11 rounded-xl shadow-lg shadow-primary/20 bg-secondary/80 hover:bg-primary/10 hover:text-primary text-foreground" onClick={startRecording} title="Record Voice Note">
+                <Mic className="w-5 h-5" />
+              </Button>
+            ) : (
+              <Button type="submit" size="icon" className="h-11 w-11 rounded-xl shadow-lg shadow-primary/20" disabled={isUploading || (!input.trim() && !pendingFile)} title="Send Message">
+                {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </Button>
+            )}
+          </form>
+        )}
       </div>
 
       {/* Editor Modal */}
