@@ -60,8 +60,33 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
     if (!socket) return;
 
     const handleNewMessage = (message) => {
-      // If we are not currently chatting with this person, trigger notification and unread
-      if (!selectedUser || Number(message.senderId) !== Number(selectedUser.id)) {
+      // Don't trigger notification if the message is from ourself
+      if (Number(message.senderId) === Number(user?.id)) return;
+
+      const isGroupMsg = message.groupId !== null && message.groupId !== undefined;
+
+      if (isGroupMsg) {
+        // If we are currently in this group chat, do not trigger notification or unread
+        const isCurrentGroup = selectedUser && selectedUser.isGroup && Number(selectedUser.id) === Number(message.groupId);
+        if (isCurrentGroup) return;
+
+        // Find the group name for notification
+        const group = groups.find(g => Number(g.id) === Number(message.groupId));
+        const groupName = group ? group.name : 'Group Uplink';
+        
+        triggerNotification(groupName, `${message.senderName || 'Operative'}: ${message.text || 'Shared a file'}`);
+
+        setGroups(prev => prev.map(g => {
+          if (Number(g.id) === Number(message.groupId)) {
+            return { ...g, unread: (g.unread || 0) + 1, lastMessage: message.text };
+          }
+          return g;
+        }));
+      } else {
+        // If we are currently in this private chat, do not trigger notification or unread
+        const isCurrentPrivate = selectedUser && !selectedUser.isGroup && Number(selectedUser.id) === Number(message.senderId);
+        if (isCurrentPrivate) return;
+
         // Find the contact name for the notification
         const sender = contacts.find(c => Number(c.id) === Number(message.senderId));
         const senderName = sender ? (sender.username || sender.email) : 'New Message';

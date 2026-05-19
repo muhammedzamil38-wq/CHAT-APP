@@ -146,6 +146,14 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
           if (prev.some(m => Number(m.id) === Number(message.id))) return prev;
           return [...prev, message];
         });
+
+        // Trigger Notification if window is in background and message is from someone else
+        if (document.visibilityState === 'hidden' && Number(message.senderId) !== Number(user?.id)) {
+          triggerNotification(
+            selectedUser.name, 
+            `${message.senderName || 'Operative'}: ${message.text || 'Shared a file'}`
+          );
+        }
       }
       return;
     }
