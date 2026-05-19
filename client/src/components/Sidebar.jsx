@@ -78,7 +78,12 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
 
         setGroups(prev => prev.map(g => {
           if (Number(g.id) === Number(message.groupId)) {
-            return { ...g, unread: (g.unread || 0) + 1, lastMessage: message.text };
+            return { 
+              ...g, 
+              unread: (g.unread || 0) + 1, 
+              lastMessage: message.text,
+              time: new Date(message.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
           }
           return g;
         }));
@@ -142,15 +147,24 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
     };
   }, [socket, selectedUser, contacts]);
 
-  // Reset unread count when a user is selected
+  // Reset unread count when a user or group is selected
   useEffect(() => {
     if (selectedUser) {
-      setContacts(prev => prev.map(contact => {
-        if (contact.id === selectedUser.id) {
-          return { ...contact, unread: 0 };
-        }
-        return contact;
-      }));
+      if (selectedUser.isGroup) {
+        setGroups(prev => prev.map(g => {
+          if (Number(g.id) === Number(selectedUser.id)) {
+            return { ...g, unread: 0 };
+          }
+          return g;
+        }));
+      } else {
+        setContacts(prev => prev.map(contact => {
+          if (Number(contact.id) === Number(selectedUser.id)) {
+            return { ...contact, unread: 0 };
+          }
+          return contact;
+        }));
+      }
     }
   }, [selectedUser]);
 
@@ -302,8 +316,22 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
               </div>
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-medium truncate">{group.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{group.lastMessage || 'Channel established.'}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium truncate">{group.name}</p>
+                {group.unread > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground animate-in zoom-in duration-300">
+                    {group.unread}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center justify-between mt-0.5">
+                <p className="text-xs text-muted-foreground truncate flex-1 pr-2">
+                  {group.lastMessage || 'Channel established.'}
+                </p>
+                {group.time && (
+                  <span className="text-[10px] text-muted-foreground shrink-0">{group.time}</span>
+                )}
+              </div>
             </div>
           </div>
         ))}
