@@ -64,6 +64,10 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
       if (Number(message.senderId) === Number(user?.id)) return;
 
       const isGroupMsg = message.groupId !== null && message.groupId !== undefined;
+      const sidebarMsg = message.fileType === 'audio' ? '🎤 Voice Note'
+                       : message.fileType === 'image' ? '📷 Image'
+                       : message.fileType ? '📁 Attachment'
+                       : message.text;
 
       if (isGroupMsg) {
         // If we are currently in this group chat, do not trigger notification or unread
@@ -74,14 +78,14 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
         const group = groups.find(g => Number(g.id) === Number(message.groupId));
         const groupName = group ? group.name : 'Group Uplink';
         
-        triggerNotification(groupName, `${message.senderName || 'Operative'}: ${message.text || 'Shared a file'}`);
+        triggerNotification(groupName, `${message.senderName || 'Operative'}: ${sidebarMsg || 'Shared a file'}`);
 
         setGroups(prev => prev.map(g => {
           if (Number(g.id) === Number(message.groupId)) {
             return { 
               ...g, 
               unread: (g.unread || 0) + 1, 
-              lastMessage: message.text,
+              lastMessage: sidebarMsg,
               time: new Date(message.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             };
           }
@@ -96,11 +100,11 @@ export function Sidebar({ onSelectUser, selectedUser, onOpenSettings }) {
         const sender = contacts.find(c => Number(c.id) === Number(message.senderId));
         const senderName = sender ? (sender.username || sender.email) : 'New Message';
         
-        triggerNotification(senderName, message.text || 'Shared a file');
+        triggerNotification(senderName, sidebarMsg || 'Shared a file');
 
         setContacts(prev => prev.map(contact => {
           if (Number(contact.id) === Number(message.senderId)) {
-            return { ...contact, unread: (contact.unread || 0) + 1, lastMessage: message.text };
+            return { ...contact, unread: (contact.unread || 0) + 1, lastMessage: sidebarMsg };
           }
           return contact;
         }));

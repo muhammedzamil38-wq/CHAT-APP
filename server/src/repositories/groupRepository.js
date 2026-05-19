@@ -45,7 +45,12 @@ export const groupRepository = {
   findUserGroups: async (userId) => {
     const result = await pool.query(
       `SELECT g.*, gm.role,
-        (SELECT text FROM messages WHERE group_id = g.id ORDER BY created_at DESC LIMIT 1) AS "lastMessage",
+        (SELECT CASE 
+                  WHEN file_type = 'audio' THEN '🎤 Voice Note'
+                  WHEN file_type = 'image' THEN '📷 Image'
+                  WHEN file_type IS NOT NULL AND file_type != '' THEN '📁 Attachment'
+                  ELSE text 
+                END FROM messages WHERE group_id = g.id ORDER BY created_at DESC LIMIT 1) AS "lastMessage",
         (SELECT created_at FROM messages WHERE group_id = g.id ORDER BY created_at DESC LIMIT 1) AS "lastMessageAt"
        FROM groups g
        JOIN group_members gm ON g.id = gm.group_id
