@@ -836,18 +836,30 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
         description="Select a contact to transmit this log."
       >
         <div className="space-y-1 max-h-[300px] overflow-y-auto no-scrollbar">
-          {contacts.filter(c => c.id !== user.id).map(contact => (
+          {contacts.filter(c => c.isGroup || Number(c.id) !== Number(user?.id)).map(contact => (
             <button
-              key={contact.id}
+              key={contact.isGroup ? `forward_group_${contact.id}` : `forward_user_${contact.id}`}
               className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors text-left"
               onClick={() => handleForwardMessage(contact)}
             >
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
-                {contact.avatarUrl ? <img src={contact.avatarUrl} className="w-full h-full object-cover rounded-full" /> : contact.email[0].toUpperCase()}
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary overflow-hidden shrink-0">
+                {contact.isGroup ? (
+                  contact.avatar_url ? (
+                    <img src={contact.avatar_url} className="w-full h-full object-cover" />
+                  ) : (
+                    <Users className="w-5 h-5" />
+                  )
+                ) : (
+                  contact.avatarUrl ? (
+                    <img src={contact.avatarUrl} className="w-full h-full object-cover" />
+                  ) : (
+                    (contact.username || contact.email || 'U')[0].toUpperCase()
+                  )
+                )}
               </div>
               <div>
-                <p className="text-sm font-medium">{contact.username || contact.email}</p>
-                <p className="text-xs text-muted-foreground">Active Operative</p>
+                <p className="text-sm font-medium">{contact.isGroup ? contact.name : (contact.username || contact.email)}</p>
+                <p className="text-xs text-muted-foreground">{contact.isGroup ? "Group Uplink" : "Active Operative"}</p>
               </div>
             </button>
           ))}
