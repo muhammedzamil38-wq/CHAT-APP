@@ -81,9 +81,9 @@ function VoicePlayer({ fileUrl }) {
       <button 
         type="button"
         onClick={togglePlay}
-        className="w-8 h-8 rounded-full bg-primary/20 hover:bg-primary/30 flex items-center justify-center text-primary transition-colors shrink-0 animate-pulse-subtle"
+        className="w-8 h-8 rounded-full bg-blue-500/20 dark:bg-blue-400/25 hover:bg-blue-500/30 dark:hover:bg-blue-400/40 flex items-center justify-center text-blue-600 dark:text-blue-400 transition-colors shrink-0 animate-pulse-subtle"
       >
-        {isPlaying ? <Pause className="w-4 h-4 fill-primary" /> : <Play className="w-4 h-4 fill-primary translate-x-[1px]" />}
+        {isPlaying ? <Pause className="w-4 h-4 fill-current text-blue-600 dark:text-blue-400" /> : <Play className="w-4 h-4 fill-current text-blue-600 dark:text-blue-400 translate-x-[1px]" />}
       </button>
       <div className="flex-1 space-y-1">
         <input 
@@ -92,7 +92,7 @@ function VoicePlayer({ fileUrl }) {
           max={duration || 100} 
           value={currentTime} 
           onChange={handleSeek}
-          className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" 
+          className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-blue-500 dark:accent-blue-400" 
         />
         <div className="flex justify-between text-[10px] text-muted-foreground">
           <span>{formatTime(currentTime)}</span>
@@ -649,9 +649,11 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                     )}
                   </div>
                 )}
-                <p className="leading-relaxed whitespace-pre-wrap">
-                  {m.isLocallyDeleted ? '🚫 This message was deleted for you' : m.text}
-                </p>
+                {(!m.fileType || m.fileType !== 'audio' || m.isLocallyDeleted) && (
+                  <p className="leading-relaxed whitespace-pre-wrap">
+                    {m.isLocallyDeleted ? '🚫 This message was deleted for you' : m.text}
+                  </p>
+                )}
                 <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
                   <span className="text-[10px]">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   {m.senderId === user.id && (
