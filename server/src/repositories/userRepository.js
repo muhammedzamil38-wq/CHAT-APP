@@ -96,7 +96,12 @@ export const userRepository = {
   findFriends: async (userId) => {
     const result = await pool.query(
       `SELECT u.id, u.email, u.username, u.bio, u.avatar_url AS "avatarUrl", u.role, u.is_banned AS "isBanned",
-        (SELECT text FROM messages 
+        (SELECT CASE 
+                  WHEN file_type = 'audio' THEN '🎤 Voice Note'
+                  WHEN file_type = 'image' THEN '📷 Image'
+                  WHEN file_type IS NOT NULL AND file_type != '' THEN '📁 Attachment'
+                  ELSE text 
+                END FROM messages 
          WHERE (sender_id = u.id AND recipient_id = $1) 
             OR (sender_id = $1 AND recipient_id = u.id)
          ORDER BY created_at DESC LIMIT 1) AS "lastMessage",
