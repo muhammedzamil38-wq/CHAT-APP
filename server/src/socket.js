@@ -7,6 +7,7 @@ import { userRepository } from "./repositories/userRepository.js";
 
 let io;
 const userSocketMap = {}; // {userId: Set(socketIds)}
+const activeGroupCalls = {}; // { [groupId]: { isVideo, hostId, hostInfo, participants: { [userId]: { socketId, username, avatarUrl, email } } } }
 
 export const initializeSocket = (httpServer) => {
   io = new Server(httpServer, {
@@ -106,6 +107,142 @@ export const initializeSocket = (httpServer) => {
       if (!updatedMessage.groupId) io.to(`user_${updatedMessage.senderId}`).emit("message_deleted", updatedMessage);
     });
 
+    // Group WebRTC Signaling
+    socket.on("group_call_initiate", ({ groupId, callerInfo, isVideo }) => {
+      logMission(`Group call initiated in group_${groupId} by ${callerInfo.id}`);
+      
+      if (!activeGroupCalls[groupId]) {
+        activeGroupCalls[groupId] = {
+          groupId,
+          isVideo,
+          hostId: callerInfo.id,
+          hostInfo: callerInfo,
+          participants: {
+            [callerInfo.id]: {
+              socketId: socket.id,
+              userId: callerInfo.id,
+              username: callerInfo.username,
+              avatarUrl: callerInfo.avatarUrl,
+              email: callerInfo.email
+            }
+          }
+        };
+      } else {
+        activeGroupCalls[groupId].participants[callerInfo.id] = {
+          socketId: socket.id,
+          userId: callerInfo.id,
+          username: callerInfo.username,
+          avatarUrl: callerInfo.avatarUrl,
+          email: callerInfo.email
+        };
+      }
+
+      socket.to(`group_${groupId}`).emit("group_call_incoming", {
+        groupId,
+        hostId: callerInfo.id,
+        hostInfo: callerInfo,
+        isVideo
+      });
+
+      io.to(`group_${groupId}`).emit("group_call_status_update", {
+        groupId,
+        isActive: true,
+        isVideo
+      });
+    });
+
+    socket.on("group_call_check_active", ({ groupId }) => {
+      const call = activeGroupCalls[groupId];
+      socket.emit("group_call_active_status", {
+        groupId,
+        isActive: !!call,
+        isVideo: call ? call.isVideo : false,
+        hostInfo: call ? call.hostInfo : null
+      });
+    });
+
+    socket.on("group_call_join", ({ groupId, userInfo }) => {
+      logMission(`User ${userInfo.id} joining group call in group_${groupId}`);
+      let call = activeGroupCalls[groupId];
+      if (!call) {
+        activeGroupCalls[groupId] = {
+          groupId,
+          isVideo: true,
+          hostId: userInfo.id,
+          hostInfo: userInfo,
+          participants: {}
+        };
+        call = activeGroupCalls[groupId];
+      }
+      
+      const newParticipant = {
+        socketId: socket.id,
+        userId: userInfo.id,
+        username: userInfo.username,
+        avatarUrl: userInfo.avatarUrl,
+        email: userInfo.email
+      };
+
+      call.participants[userInfo.id] = newParticipant;
+
+      const otherParticipants = Object.values(call.participants).filter(
+        p => String(p.userId) !== String(userInfo.id)
+      );
+
+      socket.emit("group_call_joined", {
+        groupId,
+        participants: otherParticipants,
+        isVideo: call.isVideo
+      });
+
+      otherParticipants.forEach(p => {
+        io.to(p.socketId).emit("group_call_user_joined", {
+          groupId,
+          user: newParticipant
+        });
+      });
+
+      io.to(`group_${groupId}`).emit("group_call_status_update", {
+        groupId,
+        isActive: true,
+        isVideo: call.isVideo
+      });
+    });
+
+    socket.on("group_call_signal", ({ groupId, toSocketId, signal, fromUserId }) => {
+      io.to(toSocketId).emit("group_webrtc_signal", {
+        groupId,
+        fromUserId,
+        fromSocketId: socket.id,
+        signal
+      });
+    });
+
+    socket.on("group_call_leave", ({ groupId, userId }) => {
+      logMission(`User ${userId} leaving group call in group_${groupId}`);
+      const call = activeGroupCalls[groupId];
+      if (call) {
+        delete call.participants[userId];
+        
+        const remaining = Object.values(call.participants);
+        remaining.forEach(p => {
+          io.to(p.socketId).emit("group_call_user_left", {
+            groupId,
+            userId
+          });
+        });
+
+        if (remaining.length === 0) {
+          delete activeGroupCalls[groupId];
+          io.to(`group_${groupId}`).emit("group_call_status_update", {
+            groupId,
+            isActive: false
+          });
+          io.to(`group_${groupId}`).emit("group_call_ended", { groupId });
+        }
+      }
+    });
+
     // WebRTC Signaling
     socket.on("call_user", (data) => {
       logMission(`Call initiated by ${data.callerId} to ${data.userToCall}`);
@@ -136,6 +273,34 @@ export const initializeSocket = (httpServer) => {
     socket.on("disconnect", () => {
       logMission(`Socket uplink closed: ${socket.id}`);
       
+      // Clean up any active group calls the disconnected socket was in
+      for (const [groupId, call] of Object.entries(activeGroupCalls)) {
+        for (const [userId, participant] of Object.entries(call.participants)) {
+          if (participant.socketId === socket.id) {
+            delete call.participants[userId];
+            logMission(`Auto-removed user ${userId} from group_${groupId} call on socket disconnect`);
+            
+            const remaining = Object.values(call.participants);
+            remaining.forEach(p => {
+              io.to(p.socketId).emit("group_call_user_left", {
+                groupId,
+                userId: Number(userId)
+              });
+            });
+
+            if (remaining.length === 0) {
+              delete activeGroupCalls[groupId];
+              io.to(`group_${groupId}`).emit("group_call_status_update", {
+                groupId,
+                isActive: false
+              });
+              io.to(`group_${groupId}`).emit("group_call_ended", { groupId });
+            }
+            break;
+          }
+        }
+      }
+
       for (const [uid, sockets] of Object.entries(userSocketMap)) {
         if (sockets.has(socket.id)) {
           sockets.delete(socket.id);

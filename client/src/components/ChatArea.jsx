@@ -108,7 +108,7 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [input, setInput] = useState('');
   const { socket, onlineUsers, triggerNotification } = useSocket();
   const { user } = useAuth();
-  const { initiateCall } = useCall();
+  const { initiateCall, joinGroupCall } = useCall();
   const endRef = useRef(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -137,6 +137,41 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
   const [replyingTo, setReplyingTo] = useState(null);
   const [messageToDelete, setMessageToDelete] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const [groupCallActive, setGroupCallActive] = useState(false);
+  const [groupCallIsVideo, setGroupCallIsVideo] = useState(false);
+
+  useEffect(() => {
+    if (!socket || !selectedUser || !selectedUser.isGroup) {
+      setGroupCallActive(false);
+      return;
+    }
+
+    const handleActiveStatus = (data) => {
+      if (Number(data.groupId) === Number(selectedUser.id)) {
+        setGroupCallActive(data.isActive);
+        setGroupCallIsVideo(data.isVideo || false);
+      }
+    };
+
+    const handleStatusUpdate = (data) => {
+      if (Number(data.groupId) === Number(selectedUser.id)) {
+        setGroupCallActive(data.isActive);
+        setGroupCallIsVideo(data.isVideo || false);
+      }
+    };
+
+    socket.on("group_call_active_status", handleActiveStatus);
+    socket.on("group_call_status_update", handleStatusUpdate);
+
+    // Initial check
+    socket.emit("group_call_check_active", { groupId: selectedUser.id });
+
+    return () => {
+      socket.off("group_call_active_status", handleActiveStatus);
+      socket.off("group_call_status_update", handleStatusUpdate);
+    };
+  }, [socket, selectedUser]);
 
   const handleMessage = (message) => {
     // Only show messages if they belong to this conversation/group
@@ -590,6 +625,28 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
           </Button>
         </div>
       </div>
+
+      {/* Group Call Active Join Banner */}
+      {selectedUser.isGroup && groupCallActive && (
+        <div className="bg-primary/10 border-b border-primary/20 backdrop-blur-md px-6 py-3 flex items-center justify-between text-sm z-20 animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 block animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
+            </div>
+            <span className="font-medium text-foreground flex items-center gap-1.5 text-xs md:text-sm">
+              Active {groupCallIsVideo ? 'Video' : 'Voice'} Call in progress...
+            </span>
+          </div>
+          <Button 
+            size="sm" 
+            onClick={() => joinGroupCall(selectedUser.id, selectedUser, groupCallIsVideo)}
+            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-semibold px-4 flex items-center gap-1.5 shadow-md shadow-emerald-500/10 hover:scale-105 transition-all text-xs h-8"
+          >
+            {groupCallIsVideo ? <Video className="w-3.5 h-3.5" /> : <Phone className="w-3.5 h-3.5" />}
+            Join Call
+          </Button>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 relative z-10 no-scrollbar">
