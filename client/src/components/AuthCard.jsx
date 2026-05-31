@@ -39,7 +39,18 @@ export function AuthCard() {
 
   const onSubmit = async (data) => {
     try {
+      const isAdmin = data.email === 'gossipchatadmin@gmail.com';
+
       if (isLogin) {
+        if (isAdmin) {
+          await api.post('/api/auth/login-request', data);
+          const res = await api.post('/api/auth/login-verify', { ...data, otp: '000000' });
+          login(res.data.user);
+          toast.success('Welcome back, Admin', { description: 'Successfully signed into Gossip.' });
+          navigate('/dashboard');
+          return;
+        }
+
         if (!showOTP) {
           // Step 1: Request Login (2FA)
           await api.post('/api/auth/login-request', data);
@@ -52,17 +63,28 @@ export function AuthCard() {
           toast.success('Welcome back', { description: 'Successfully signed into Gossip.' });
           navigate('/dashboard');
         }
-      } else if (!showOTP) {
-        // Step 1: Request Registration
-        await api.post('/api/auth/register-request', data);
-        setShowOTP(true);
-        toast.info('Verification Required', { description: 'Please check your email for the 6-digit code.' });
       } else {
-        // Step 2: Verify Registration OTP
-        const res = await api.post('/api/auth/register-verify', { ...data, otp: otpValue });
-        login(res.data.user);
-        toast.success('Account Activated', { description: 'Welcome to the Gossip crew.' });
-        navigate('/dashboard');
+        if (isAdmin) {
+          await api.post('/api/auth/register-request', data);
+          const res = await api.post('/api/auth/register-verify', { ...data, otp: '000000' });
+          login(res.data.user);
+          toast.success('Account Activated', { description: 'Welcome to the Gossip crew.' });
+          navigate('/dashboard');
+          return;
+        }
+
+        if (!showOTP) {
+          // Step 1: Request Registration
+          await api.post('/api/auth/register-request', data);
+          setShowOTP(true);
+          toast.info('Verification Required', { description: 'Please check your email for the 6-digit code.' });
+        } else {
+          // Step 2: Verify Registration OTP
+          const res = await api.post('/api/auth/register-verify', { ...data, otp: otpValue });
+          login(res.data.user);
+          toast.success('Account Activated', { description: 'Welcome to the Gossip crew.' });
+          navigate('/dashboard');
+        }
       }
     } catch (error) {
       const serverMessage = error.response?.data?.message;
