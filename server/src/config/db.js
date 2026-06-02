@@ -2,15 +2,78 @@ import { Pool } from "pg";
 import { env } from "./env.js";
 import { logMission } from "../utils/logger.js";
 
-export const pool = new Pool({
+const getSslConfig = (dbUrl, fallbackState = null) => {
+  if (!dbUrl) return false;
+  
+  if (fallbackState !== null) {
+    return fallbackState;
+  }
+  
+  if (dbUrl.includes("localhost") || dbUrl.includes("127.0.0.1")) {
+    return false;
+  }
+  
+  // Render internal URL starts with dpg- and has no external domain
+  if (dbUrl.includes("dpg-") && !dbUrl.includes(".render.com")) {
+    return false;
+  }
+  
+  return { rejectUnauthorized: false };
+};
+
+let activePool = new Pool({
   connectionString: env.databaseUrl,
-  ssl: env.nodeEnv === "production" || (!env.databaseUrl.includes("localhost") && !env.databaseUrl.includes("127.0.0.1"))
-    ? { rejectUnauthorized: false }
-    : false
+  ssl: getSslConfig(env.databaseUrl)
+});
+
+// Proxy pool that routes all operations to the currently active, connected pool instance
+export const pool = new Proxy({}, {
+  get: (target, prop) => {
+    const val = activePool[prop];
+    if (typeof val === 'function') {
+      return val.bind(activePool);
+    }
+    return val;
+  }
 });
 
 export const initializeDatabase = async () => {
-  await pool.query(`
+  let attempts = 0;
+  let success = false;
+
+  while (attempts < 2 && !success) {
+    try {
+      // Perform a lightweight probe query to check if connection works
+      await activePool.query("SELECT 1");
+      logMission("Database connection probe succeeded. Connection verified.");
+      success = true;
+    } catch (error) {
+      attempts++;
+      console.warn(`[MISSION-CONTROL][DB] Connection probe ${attempts} failed:`, error.message);
+      
+      if (attempts < 2) {
+        console.log("[MISSION-CONTROL][DB] Attempting database connection self-healing fallback...");
+        // Terminate the failing pool connection
+        await activePool.end().catch(() => {});
+        
+        // Flip SSL configuration state to find the working setting
+        const currentSsl = getSslConfig(env.databaseUrl);
+        const flippedSsl = currentSsl ? false : { rejectUnauthorized: false };
+        
+        console.log(`[MISSION-CONTROL][DB] Re-initializing active pool with flipped SSL status:`, !!flippedSsl);
+        activePool = new Pool({
+          connectionString: env.databaseUrl,
+          ssl: flippedSsl
+        });
+      } else {
+        // Fail-over exhausted, rethrow the latest connection error
+        throw error;
+      }
+    }
+  }
+
+  // Once activePool is successfully connected, run setup tables queries
+  await activePool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       username VARCHAR(255),
@@ -25,18 +88,18 @@ export const initializeDatabase = async () => {
     )
   `);
 
-  await pool.query(`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`);
-  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE`);
+  await activePool.query(`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`);
+  await activePool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE`);
   
-  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
-  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
-  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user'`);
-  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT false`);
+  await activePool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
+  await activePool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
+  await activePool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user'`);
+  await activePool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT false`);
   
   // Enforce Master Admin Role
-  await pool.query(`UPDATE users SET role = 'admin' WHERE email = 'gossipchatadmin@gmail.com'`);
+  await activePool.query(`UPDATE users SET role = 'admin' WHERE email = 'gossipchatadmin@gmail.com'`);
 
-  await pool.query(`
+  await activePool.query(`
     CREATE TABLE IF NOT EXISTS media_assets (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -47,7 +110,7 @@ export const initializeDatabase = async () => {
     )
   `);
 
-  await pool.query(`
+  await activePool.query(`
     CREATE TABLE IF NOT EXISTS friends (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -57,7 +120,7 @@ export const initializeDatabase = async () => {
     )
   `);
 
-  await pool.query(`
+  await activePool.query(`
     CREATE TABLE IF NOT EXISTS messages (
       id SERIAL PRIMARY KEY,
       sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -74,16 +137,16 @@ export const initializeDatabase = async () => {
     )
   `);
   
-  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER REFERENCES messages(id) ON DELETE SET NULL`);
-  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_forwarded BOOLEAN DEFAULT FALSE`);
+  await activePool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER REFERENCES messages(id) ON DELETE SET NULL`);
+  await activePool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_forwarded BOOLEAN DEFAULT FALSE`);
   
-  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT FALSE`);
-  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url TEXT`);
-  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50)`);
-  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)`);
-  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`);
+  await activePool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT FALSE`);
+  await activePool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url TEXT`);
+  await activePool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50)`);
+  await activePool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)`);
+  await activePool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`);
   
-  await pool.query(`
+  await activePool.query(`
     CREATE TABLE IF NOT EXISTS verification_otps (
       id SERIAL PRIMARY KEY,
       email VARCHAR(255) NOT NULL,
@@ -93,7 +156,7 @@ export const initializeDatabase = async () => {
     )
   `);
   
-  await pool.query(`
+  await activePool.query(`
     CREATE TABLE IF NOT EXISTS message_visibility (
       id SERIAL PRIMARY KEY,
       message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
@@ -102,7 +165,7 @@ export const initializeDatabase = async () => {
     )
   `);
 
-  await pool.query(`
+  await activePool.query(`
     CREATE TABLE IF NOT EXISTS groups (
       id SERIAL PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -113,7 +176,7 @@ export const initializeDatabase = async () => {
     )
   `);
 
-  await pool.query(`
+  await activePool.query(`
     CREATE TABLE IF NOT EXISTS group_members (
       id SERIAL PRIMARY KEY,
       group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -124,10 +187,10 @@ export const initializeDatabase = async () => {
     )
   `);
 
-  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE`);
-  await pool.query(`ALTER TABLE messages ALTER COLUMN recipient_id DROP NOT NULL`);
+  await activePool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE`);
+  await activePool.query(`ALTER TABLE messages ALTER COLUMN recipient_id DROP NOT NULL`);
 
-  await pool.query(`
+  await activePool.query(`
     CREATE TABLE IF NOT EXISTS reports (
       id SERIAL PRIMARY KEY,
       reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
