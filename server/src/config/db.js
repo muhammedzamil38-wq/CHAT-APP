@@ -51,10 +51,6 @@ export const pool = new Proxy({}, {
   }
 });
 
-// DB readiness flag — set to true once initializeDatabase() completes successfully
-let dbReady = false;
-export const isDbReady = () => dbReady;
-
 export const initializeDatabase = async () => {
   let attempts = 0;
   const maxAttempts = 8;
@@ -246,5 +242,4 @@ export const initializeDatabase = async () => {
   `);
 
   logMission("Group Chat telemetry online. Tables verified.");
-  dbReady = true;
 };
