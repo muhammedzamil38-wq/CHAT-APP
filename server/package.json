@@ -6,7 +6,8 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "render-build": "npm install && cd ../client && npm install && npm run build && cd ../server && node -e \"const fs=require('fs');const src=require('path').join(__dirname,'..','client','dist');const dest=require('path').join(__dirname,'client','dist');if(fs.existsSync(src)){fs.cpSync(src,dest,{recursive:true});console.log('[BUILD] Copied client/dist -> server/client/dist');}else{console.error('[BUILD] FATAL: client/dist not found after build');process.exit(1);}\""
   },
   "engines": {
     "node": ">=20"

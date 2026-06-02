@@ -27,7 +27,7 @@ const createPoolWithListeners = (connectionString, ssl) => {
     ssl,
     max: 5, // Limit concurrent pool connections to protect free-tier Postgres database limits
     idleTimeoutMillis: 10000, // Close idle connections after 10 seconds
-    connectionTimeoutMillis: 5000 // Timeout fast if connection fails
+    connectionTimeoutMillis: 15000 // Longer timeout for Render free-tier cold starts
   });
 
   // Catch unexpected background errors on idle clients to prevent Node server crashing!
@@ -53,10 +53,12 @@ export const pool = new Proxy({}, {
 
 export const initializeDatabase = async () => {
   let attempts = 0;
+  const maxAttempts = 8;
   let success = false;
   let currentSsl = getSslConfig(env.databaseUrl);
+  let consecutiveSameModeFails = 0;
 
-  while (attempts < 5 && !success) {
+  while (attempts < maxAttempts && !success) {
     try {
       // Perform a lightweight probe query to check if connection works
       await activePool.query("SELECT 1");
@@ -64,10 +66,11 @@ export const initializeDatabase = async () => {
       success = true;
     } catch (error) {
       attempts++;
+      consecutiveSameModeFails++;
       const errMsg = error.message || "";
       console.warn(`[MISSION-CONTROL][DB] Connection probe ${attempts} failed:`, errMsg);
       
-      if (attempts >= 5) {
+      if (attempts >= maxAttempts) {
         // Fail-over and retry quota exhausted, rethrow the connection error
         throw error;
       }
@@ -79,24 +82,36 @@ export const initializeDatabase = async () => {
       if (errMsg.includes("SSL/TLS required") || (errMsg.includes("no pg_hba.conf entry") && errMsg.includes("SSL off"))) {
         console.log("[MISSION-CONTROL][DB] Database requires SSL. Activating SSL mode...");
         currentSsl = { rejectUnauthorized: false };
+        consecutiveSameModeFails = 0;
       } else if (errMsg.includes("no pg_hba.conf entry") && errMsg.includes("SSL on")) {
         console.log("[MISSION-CONTROL][DB] Database does not support SSL. Disabling SSL...");
         currentSsl = false;
+        consecutiveSameModeFails = 0;
       } else if (errMsg.includes("Connection terminated unexpectedly") || errMsg.includes("timeout") || errMsg.includes("ECONNRESET")) {
-        // Connection limit exhaustion on Render or network drop: wait and retry with same SSL config
-        const delay = attempts * 1500;
-        console.log(`[MISSION-CONTROL][DB] Render limit exhaustion or network drop detected. Retrying with same SSL mode in ${delay}ms...`);
+        // After 2 consecutive failures with same SSL mode, toggle SSL as the
+        // "terminated unexpectedly" error can be a silent SSL handshake rejection
+        if (consecutiveSameModeFails >= 2) {
+          const newSsl = currentSsl ? false : { rejectUnauthorized: false };
+          console.log(`[MISSION-CONTROL][DB] ${consecutiveSameModeFails} consecutive failures. Toggling SSL from ${!!currentSsl} to ${!!newSsl}...`);
+          currentSsl = newSsl;
+          consecutiveSameModeFails = 0;
+        }
+        
+        const delay = Math.min(attempts * 2000, 10000);
+        console.log(`[MISSION-CONTROL][DB] Network/connection error. Retrying in ${delay}ms (SSL: ${!!currentSsl}, attempt ${attempts + 1}/${maxAttempts})...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {
         // Safe fallback toggle for any other connection errors
         console.log("[MISSION-CONTROL][DB] Unhandled connection error. Toggling SSL mode as fallback...");
         currentSsl = currentSsl ? false : { rejectUnauthorized: false };
+        consecutiveSameModeFails = 0;
       }
 
-      console.log(`[MISSION-CONTROL][DB] Re-initializing active pool (SSL: ${!!currentSsl}, Attempt: ${attempts + 1})`);
+      console.log(`[MISSION-CONTROL][DB] Re-initializing active pool (SSL: ${!!currentSsl}, Attempt: ${attempts + 1}/${maxAttempts})`);
       activePool = createPoolWithListeners(env.databaseUrl, currentSsl);
     }
   }
+
 
   // Once activePool is successfully connected, run setup tables queries
   await activePool.query(`
