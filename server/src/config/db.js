@@ -21,10 +21,24 @@ const getSslConfig = (dbUrl, fallbackState = null) => {
   return { rejectUnauthorized: false };
 };
 
-let activePool = new Pool({
-  connectionString: env.databaseUrl,
-  ssl: getSslConfig(env.databaseUrl)
-});
+const createPoolWithListeners = (connectionString, ssl) => {
+  const newPool = new Pool({
+    connectionString,
+    ssl,
+    max: 5, // Limit concurrent pool connections to protect free-tier Postgres database limits
+    idleTimeoutMillis: 10000, // Close idle connections after 10 seconds
+    connectionTimeoutMillis: 5000 // Timeout fast if connection fails
+  });
+
+  // Catch unexpected background errors on idle clients to prevent Node server crashing!
+  newPool.on('error', (err) => {
+    console.error('[MISSION-CONTROL][DB-POOL-ERROR] Unexpected error on idle database client:', err.message);
+  });
+
+  return newPool;
+};
+
+let activePool = createPoolWithListeners(env.databaseUrl, getSslConfig(env.databaseUrl));
 
 // Proxy pool that routes all operations to the currently active, connected pool instance
 export const pool = new Proxy({}, {
@@ -61,10 +75,7 @@ export const initializeDatabase = async () => {
         const flippedSsl = currentSsl ? false : { rejectUnauthorized: false };
         
         console.log(`[MISSION-CONTROL][DB] Re-initializing active pool with flipped SSL status:`, !!flippedSsl);
-        activePool = new Pool({
-          connectionString: env.databaseUrl,
-          ssl: flippedSsl
-        });
+        activePool = createPoolWithListeners(env.databaseUrl, flippedSsl);
       } else {
         // Fail-over exhausted, rethrow the latest connection error
         throw error;
