@@ -54,8 +54,9 @@ export const pool = new Proxy({}, {
 export const initializeDatabase = async () => {
   let attempts = 0;
   let success = false;
+  let currentSsl = getSslConfig(env.databaseUrl);
 
-  while (attempts < 2 && !success) {
+  while (attempts < 5 && !success) {
     try {
       // Perform a lightweight probe query to check if connection works
       await activePool.query("SELECT 1");
@@ -63,23 +64,37 @@ export const initializeDatabase = async () => {
       success = true;
     } catch (error) {
       attempts++;
-      console.warn(`[MISSION-CONTROL][DB] Connection probe ${attempts} failed:`, error.message);
+      const errMsg = error.message || "";
+      console.warn(`[MISSION-CONTROL][DB] Connection probe ${attempts} failed:`, errMsg);
       
-      if (attempts < 2) {
-        console.log("[MISSION-CONTROL][DB] Attempting database connection self-healing fallback...");
-        // Terminate the failing pool connection
-        await activePool.end().catch(() => {});
-        
-        // Flip SSL configuration state to find the working setting
-        const currentSsl = getSslConfig(env.databaseUrl);
-        const flippedSsl = currentSsl ? false : { rejectUnauthorized: false };
-        
-        console.log(`[MISSION-CONTROL][DB] Re-initializing active pool with flipped SSL status:`, !!flippedSsl);
-        activePool = createPoolWithListeners(env.databaseUrl, flippedSsl);
-      } else {
-        // Fail-over exhausted, rethrow the latest connection error
+      if (attempts >= 5) {
+        // Fail-over and retry quota exhausted, rethrow the connection error
         throw error;
       }
+
+      // Terminate the current pool connection to avoid leaks
+      await activePool.end().catch(() => {});
+      
+      // Analyze the error semantically to make smart routing choices
+      if (errMsg.includes("SSL/TLS required") || (errMsg.includes("no pg_hba.conf entry") && errMsg.includes("SSL off"))) {
+        console.log("[MISSION-CONTROL][DB] Database requires SSL. Activating SSL mode...");
+        currentSsl = { rejectUnauthorized: false };
+      } else if (errMsg.includes("no pg_hba.conf entry") && errMsg.includes("SSL on")) {
+        console.log("[MISSION-CONTROL][DB] Database does not support SSL. Disabling SSL...");
+        currentSsl = false;
+      } else if (errMsg.includes("Connection terminated unexpectedly") || errMsg.includes("timeout") || errMsg.includes("ECONNRESET")) {
+        // Connection limit exhaustion on Render or network drop: wait and retry with same SSL config
+        const delay = attempts * 1500;
+        console.log(`[MISSION-CONTROL][DB] Render limit exhaustion or network drop detected. Retrying with same SSL mode in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        // Safe fallback toggle for any other connection errors
+        console.log("[MISSION-CONTROL][DB] Unhandled connection error. Toggling SSL mode as fallback...");
+        currentSsl = currentSsl ? false : { rejectUnauthorized: false };
+      }
+
+      console.log(`[MISSION-CONTROL][DB] Re-initializing active pool (SSL: ${!!currentSsl}, Attempt: ${attempts + 1})`);
+      activePool = createPoolWithListeners(env.databaseUrl, currentSsl);
     }
   }
 
