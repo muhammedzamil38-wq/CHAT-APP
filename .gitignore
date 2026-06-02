@@ -1,1 +1,23 @@
 .vscode
+
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build artifacts
+client/dist/
+server/client/dist/
+
+# Environment files
+.env
+server/.env
+client/.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db

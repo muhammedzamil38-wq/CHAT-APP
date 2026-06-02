@@ -71,16 +71,29 @@ app.use("/api/groups", groupRoutes);
 app.use("/api/files", fileRoutes);
 
 if (env.nodeEnv === "production") {
-  const clientBuildPath = path.resolve("client/dist");
-  
-  if (fs.existsSync(clientBuildPath)) {
+  // Detect client/dist across multiple possible deployment layouts:
+  // 1. CWD = monorepo root  -> client/dist
+  // 2. CWD = server dir     -> ../client/dist
+  // 3. Render absolute path -> /opt/render/project/src/client/dist
+  const __dirname = path.dirname(new URL(import.meta.url).pathname);
+  const candidatePaths = [
+    path.resolve("client/dist"),
+    path.resolve("../client/dist"),
+    path.join(__dirname, "../../client/dist"),   // server/src -> server -> root -> client/dist
+    path.join(__dirname, "../../../client/dist"), // deeper nesting fallback
+    "/opt/render/project/src/client/dist",
+  ];
+
+  const clientBuildPath = candidatePaths.find(p => fs.existsSync(p)) || null;
+
+  if (clientBuildPath) {
     console.log(`[PRODUCTION] Static assets found. Serving from: ${clientBuildPath}`);
     app.use(express.static(clientBuildPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(clientBuildPath, "index.html"));
     });
   } else {
-    console.warn(`[PRODUCTION] API-ONLY MODE: No static assets found at ${clientBuildPath}.`);
+    console.warn(`[PRODUCTION] API-ONLY MODE: No static assets found. Searched:\n  ${candidatePaths.join("\n  ")}`);
     app.get("/", (_req, res) => {
       res.status(200).json({ 
         message: "[MISSION-CONTROL] GOSSIP API Online.", 

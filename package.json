@@ -6,7 +6,8 @@
     "install-all": "npm install --prefix client && npm install --prefix server",
     "build-client": "npm install --prefix client && npm run build --prefix client",
     "install-server": "npm install --prefix server",
-    "build": "npm run build-client && npm run install-server",
+    "copy-dist": "node -e \"const fs=require('fs');const path=require('path');const src=path.join(__dirname,'client','dist');const dest=path.join(__dirname,'server','client','dist');if(fs.existsSync(src)){fs.cpSync(src,dest,{recursive:true});console.log('[BUILD] Copied client/dist -> server/client/dist');}else{console.warn('[BUILD] client/dist not found, skipping copy');}\"",
+    "build": "npm run build-client && npm run install-server && npm run copy-dist",
     "start": "node server/src/index.js"
   }
 }
