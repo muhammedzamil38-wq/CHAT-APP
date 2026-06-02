@@ -4,7 +4,9 @@ import { logMission } from "../utils/logger.js";
 
 export const pool = new Pool({
   connectionString: env.databaseUrl,
-  ssl: env.nodeEnv === "production" ? { rejectUnauthorized: false } : false
+  ssl: env.nodeEnv === "production" || (!env.databaseUrl.includes("localhost") && !env.databaseUrl.includes("127.0.0.1"))
+    ? { rejectUnauthorized: false }
+    : false
 });
 
 export const initializeDatabase = async () => {
