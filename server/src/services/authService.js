@@ -15,7 +15,6 @@ export const authService = {
   verifyCredentials: async (email, password) => {
     const user = await userRepository.findByEmail(email);
     console.log(`[MISSION-CONTROL][DB-DEBUG] verifyCredentials: password type is ${typeof password}, user.password_hash type is ${user ? typeof user.password_hash : 'no-user'}`);
-    console.log(`[MISSION-CONTROL][DB-DEBUG] verifyCredentials: user data:`, JSON.stringify(user));
     
     if (!user) return null;
 
@@ -24,8 +23,8 @@ export const authService = {
     }
 
     if (!user.password_hash) {
-      console.log(`[MISSION-CONTROL][DB-DEBUG] verifyCredentials: user has no password_hash (registered via OAuth)`);
-      throw new AppError("This account was registered using Google. Please log in with Google.", 400);
+      console.log(`[MISSION-CONTROL][DB-DEBUG] verifyCredentials: user has no password_hash (registered via OAuth). Proceeding to 2FA for account linking.`);
+      return user;
     }
 
     const isMatch = await bcrypt.compare(String(password), String(user.password_hash));
@@ -57,11 +56,14 @@ export const authService = {
       throw new AppError("Mission Access Denied: Operative has been permanently banned from the network.", 403);
     }
 
-    if (!user.password_hash) {
-      throw new AppError("This account was registered using Google. Please log in with Google.", 400);
+    let passwordHash = user.password_hash;
+    if (!passwordHash) {
+      passwordHash = await bcrypt.hash(password, 12);
+      await userRepository.updatePasswordHash(user.id, passwordHash);
+      console.log(`[MISSION-CONTROL][AUTH] Password established for OAuth user: ${email}`);
     }
 
-    const isMatch = await bcrypt.compare(String(password), String(user.password_hash));
+    const isMatch = await bcrypt.compare(String(password), String(passwordHash));
     if (!isMatch) throw new AppError("Invalid credentials.", 401);
 
     return {
