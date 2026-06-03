@@ -32,11 +32,8 @@ export const configurePassport = () => {
       // 2. Check if user exists by email (link accounts)
       user = await userRepository.findByEmail(email);
       if (user) {
-        // Update user with google_id
-        // For simplicity, we just link it here if needed, but the current repo doesn't have an updateGoogleId method.
-        // We'll just assume they'll login with email/pass or we can add the update logic.
-        // For now, let's just return the user if emails match.
-        return done(null, user);
+        const updatedUser = await userRepository.linkGoogleId(user.id, googleId, avatarUrl);
+        return done(null, updatedUser);
       }
 
       // 3. Create new user

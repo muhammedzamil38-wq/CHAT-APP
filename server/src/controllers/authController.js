@@ -28,7 +28,7 @@ export const authController = {
     }
     
     const existingUser = await userRepository.findByEmail(email);
-    if (existingUser) {
+    if (existingUser && existingUser.password_hash) {
       throw new AppError("[MISSION-CONTROL] Identity collision: email already registered.", 400);
     }
     

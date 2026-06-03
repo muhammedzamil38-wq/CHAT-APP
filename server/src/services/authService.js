@@ -35,7 +35,13 @@ export const authService = {
   register: async (email, password, username) => {
     const passwordHash = await bcrypt.hash(password, 12);
     const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'user';
-    const user = await userRepository.create(email, passwordHash, username, role);
+    
+    let user = await userRepository.findByEmail(email);
+    if (user) {
+      user = await userRepository.updatePasswordHash(user.id, passwordHash);
+    } else {
+      user = await userRepository.create(email, passwordHash, username, role);
+    }
 
     return {
       token: signToken(user.id),

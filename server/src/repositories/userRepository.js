@@ -34,6 +34,29 @@ export const userRepository = {
     return result.rows[0] ?? null;
   },
 
+  linkGoogleId: async (id, googleId, avatarUrl = null) => {
+    const result = await pool.query(
+      `UPDATE users 
+       SET google_id = $1,
+           avatar_url = COALESCE(avatar_url, $2)
+       WHERE id = $3
+       RETURNING id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned"`,
+      [googleId, avatarUrl, id]
+    );
+    return result.rows[0];
+  },
+
+  updatePasswordHash: async (id, passwordHash) => {
+    const result = await pool.query(
+      `UPDATE users 
+       SET password_hash = $1 
+       WHERE id = $2 
+       RETURNING id, email, username, bio, avatar_url AS "avatarUrl", role, is_banned AS "isBanned"`,
+      [passwordHash, id]
+    );
+    return result.rows[0];
+  },
+
   updateProfile: async (id, { username, bio, avatarUrl }) => {
     const result = await pool.query(
       `UPDATE users 
