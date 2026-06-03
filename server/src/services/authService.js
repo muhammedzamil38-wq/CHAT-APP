@@ -25,7 +25,7 @@ export const authService = {
 
     if (!user.password_hash) {
       console.log(`[MISSION-CONTROL][DB-DEBUG] verifyCredentials: user has no password_hash (registered via OAuth)`);
-      return null;
+      throw new AppError("This account was registered using Google. Please log in with Google.", 400);
     }
 
     const isMatch = await bcrypt.compare(String(password), String(user.password_hash));
