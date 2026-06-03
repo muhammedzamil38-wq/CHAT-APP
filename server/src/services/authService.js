@@ -14,13 +14,21 @@ const ADMIN_EMAIL = "gossipchatadmin@gmail.com";
 export const authService = {
   verifyCredentials: async (email, password) => {
     const user = await userRepository.findByEmail(email);
+    console.log(`[MISSION-CONTROL][DB-DEBUG] verifyCredentials: password type is ${typeof password}, user.password_hash type is ${user ? typeof user.password_hash : 'no-user'}`);
+    console.log(`[MISSION-CONTROL][DB-DEBUG] verifyCredentials: user data:`, JSON.stringify(user));
+    
     if (!user) return null;
 
     if (user.isBanned) {
       throw new AppError("Mission Access Denied: Operative has been permanently banned from the network.", 403);
     }
 
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!user.password_hash) {
+      console.log(`[MISSION-CONTROL][DB-DEBUG] verifyCredentials: user has no password_hash (registered via OAuth)`);
+      return null;
+    }
+
+    const isMatch = await bcrypt.compare(String(password), String(user.password_hash));
     return isMatch ? user : null;
   },
 
@@ -43,7 +51,11 @@ export const authService = {
       throw new AppError("Mission Access Denied: Operative has been permanently banned from the network.", 403);
     }
 
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!user.password_hash) {
+      throw new AppError("This account was registered using Google. Please log in with Google.", 400);
+    }
+
+    const isMatch = await bcrypt.compare(String(password), String(user.password_hash));
     if (!isMatch) throw new AppError("Invalid credentials.", 401);
 
     return {
