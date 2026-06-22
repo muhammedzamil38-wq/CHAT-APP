@@ -690,8 +690,8 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
               <div className={`
                 px-4 py-2 rounded-2xl text-sm shadow-sm relative group border
                 ${m.senderId === user.id 
-                  ? 'bg-primary text-primary-foreground rounded-tr-none border-primary/20' 
-                  : 'bg-secondary/60 dark:bg-[#2a2a2a] text-foreground rounded-tl-none border-border/40 dark:border-white/5'}
+                  ? 'bg-[hsl(var(--sender-bubble))] text-[hsl(var(--bubble-text))] rounded-tr-none border-emerald-500/10' 
+                  : 'bg-[hsl(var(--recipient-bubble))] text-foreground rounded-tl-none border-border/40 dark:border-white/5'}
                 ${(m.isDeleted || m.isLocallyDeleted) ? 'opacity-50 italic' : ''}
               `}>
                 {selectedUser.isGroup && m.senderId !== user.id && (
