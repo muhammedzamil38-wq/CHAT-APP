@@ -201,6 +201,14 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
         if (prev.some(m => Number(m.id) === Number(message.id))) return prev;
         return [...prev, message];
       });
+
+      // Mark as read immediately on the server if we are viewing the sender's conversation and they sent it to us
+      if (isToMe && socket) {
+        socket.emit("mark_read", {
+          senderId: selectedUser.id,
+          recipientId: user.id
+        });
+      }
       
       // Notification logic
       if (document.visibilityState === 'hidden' && isToMe) {
@@ -230,16 +238,35 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
       }));
     };
 
+    const handleMessagesDelivered = ({ recipientId, messageIds }) => {
+      if (Number(recipientId) === Number(selectedUser?.id)) {
+        setMessages(prev => prev.map(m => messageIds.includes(m.id) ? { ...m, isDelivered: true } : m));
+      }
+    };
+
+    const handleMessagesRead = ({ senderId, recipientId, messageIds }) => {
+      const isThisConversation = 
+        (Number(senderId) === Number(user?.id) && Number(recipientId) === Number(selectedUser?.id)) ||
+        (Number(senderId) === Number(selectedUser?.id) && Number(recipientId) === Number(user?.id));
+      if (isThisConversation) {
+        setMessages(prev => prev.map(m => messageIds.includes(m.id) ? { ...m, isDelivered: true, isRead: true } : m));
+      }
+    };
+
     socket.on('message_deleted', handleDelete);
     socket.on('user_profile_updated', handleProfileUpdate);
+    socket.on('messages_delivered', handleMessagesDelivered);
+    socket.on('messages_read', handleMessagesRead);
 
     return () => {
       socket.off('receive_message', handleMessage);
       socket.off('message_edited');
       socket.off('message_deleted');
       socket.off('user_profile_updated', handleProfileUpdate);
+      socket.off('messages_delivered', handleMessagesDelivered);
+      socket.off('messages_read', handleMessagesRead);
     };
-  }, [socket, selectedUser, triggerNotification]);
+  }, [socket, selectedUser, user?.id, triggerNotification]);
 
   // Load message history
   useEffect(() => {
@@ -250,12 +277,19 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
           : `/api/messages/${selectedUser.id}`;
         const res = await api.get(endpoint);
         setMessages(res.data?.messages || []);
+
+        if (!selectedUser.isGroup && socket && user?.id) {
+          socket.emit("mark_read", {
+            senderId: selectedUser.id,
+            recipientId: user.id
+          });
+        }
       } catch (error) {
         console.error('Failed to fetch messages', error);
       }
     };
     if (selectedUser) fetchMessages();
-  }, [selectedUser]);
+  }, [selectedUser, socket, user?.id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -713,8 +747,16 @@ export function ChatArea({ selectedUser, onBack, isMobile }) {
                 )}
                 <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
                   <span className="text-[10px]">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  {m.senderId === user.id && (
-                    <CheckCheck className={`w-3 h-3 ${onlineUsers.includes(String(selectedUser.id)) ? 'text-blue-400' : ''}`} />
+                  {m.senderId === user.id && !selectedUser.isGroup && (
+                    <span className="flex items-center">
+                      {m.isRead ? (
+                        <CheckCheck className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+                      ) : m.isDelivered ? (
+                        <CheckCheck className="w-3.5 h-3.5 text-black dark:text-white/80" />
+                      ) : (
+                        <Check className="w-3.5 h-3.5 text-black dark:text-white/80" />
+                      )}
+                    </span>
                   )}
                 </div>
 

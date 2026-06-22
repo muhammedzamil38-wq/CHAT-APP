@@ -51,6 +51,8 @@ export const initializeSocket = (httpServer) => {
       const groups = await groupRepository.findUserGroups(Number(userId));
       groups.forEach(g => socket.join(`group_${g.id}`));
 
+      const wasOffline = !userSocketMap[uid] || userSocketMap[uid].size === 0;
+
       if (!userSocketMap[uid]) {
         userSocketMap[uid] = new Set();
       }
@@ -59,19 +61,69 @@ export const initializeSocket = (httpServer) => {
       // Broadcast to everyone
       io.emit("getOnlineUsers", getOnlineUserIds());
       logMission(`User ${uid} identified. Total online: ${getOnlineUserIds().length}`);
+
+      if (wasOffline) {
+        try {
+          const deliveredMessages = await messageRepository.markAsDelivered(Number(userId));
+          if (deliveredMessages.length > 0) {
+            const senderMap = {};
+            deliveredMessages.forEach(m => {
+              if (!senderMap[m.senderId]) {
+                senderMap[m.senderId] = [];
+              }
+              senderMap[m.senderId].push(m.id);
+            });
+
+            for (const [senderId, messageIds] of Object.entries(senderMap)) {
+              io.to(`user_${senderId}`).emit("messages_delivered", {
+                recipientId: Number(userId),
+                messageIds
+              });
+            }
+          }
+        } catch (err) {
+          console.error("[MISSION-CONTROL][SOCKET-ERROR] Failed to update delivery status:", err.message);
+        }
+      }
     });
 
     socket.on("private_message", async ({ to, text, senderId, fileUrl, fileType, fileName, replyToId, isForwarded }) => {
       try {
         const sId = Number(senderId);
         const rId = Number(to);
-        const savedMessage = await messageRepository.save(sId, rId, text, fileUrl, fileType, fileName, replyToId, isForwarded);
+        const isRecipientOnline = userSocketMap[String(to)] && userSocketMap[String(to)].size > 0;
+        
+        const savedMessage = await messageRepository.save(sId, rId, text, fileUrl, fileType, fileName, replyToId, isForwarded, null, isRecipientOnline);
         
         io.to(`user_${to}`).emit("receive_message", savedMessage);
         io.to(`user_${senderId}`).emit("receive_message", savedMessage);
-    } catch (error) {
-      console.error("[MISSION-CONTROL][SOCKET-ERROR] Failed to save/emit message:", error.message);
-    }
+      } catch (error) {
+        console.error("[MISSION-CONTROL][SOCKET-ERROR] Failed to save/emit message:", error.message);
+      }
+    });
+
+    socket.on("mark_read", async ({ senderId, recipientId }) => {
+      try {
+        const sId = Number(senderId);
+        const rId = Number(recipientId);
+        
+        const readMessages = await messageRepository.markAsRead(sId, rId);
+        if (readMessages.length > 0) {
+          const messageIds = readMessages.map(m => m.id);
+          io.to(`user_${sId}`).emit("messages_read", {
+            senderId: sId,
+            recipientId: rId,
+            messageIds
+          });
+          io.to(`user_${rId}`).emit("messages_read", {
+            senderId: sId,
+            recipientId: rId,
+            messageIds
+          });
+        }
+      } catch (error) {
+        console.error("[MISSION-CONTROL][SOCKET-ERROR] Failed to mark messages as read:", error.message);
+      }
     });
 
     socket.on("group_message", async ({ groupId, text, senderId, fileUrl, fileType, fileName, replyToId, isForwarded }) => {

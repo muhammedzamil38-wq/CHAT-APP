@@ -1,13 +1,13 @@
 import { pool } from "../config/db.js";
 
 export const messageRepository = {
-  save: async (senderId, recipientId, text, fileUrl = null, fileType = null, fileName = null, replyToId = null, isForwarded = false, groupId = null) => {
+  save: async (senderId, recipientId, text, fileUrl = null, fileType = null, fileName = null, replyToId = null, isForwarded = false, groupId = null, isDelivered = false) => {
     try {
       const result = await pool.query(
-        `INSERT INTO messages (sender_id, recipient_id, text, file_url, file_type, file_name, reply_to_id, is_forwarded, group_id) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING id, sender_id AS "senderId", recipient_id AS "to", group_id AS "groupId", text, file_url AS "fileUrl", file_type AS "fileType", file_name AS "fileName", reply_to_id AS "replyToId", is_forwarded AS "isForwarded", created_at AS "createdAt", is_edited AS "isEdited", is_deleted AS "isDeleted"`,
-        [senderId, recipientId, text, fileUrl, fileType, fileName, replyToId, isForwarded, groupId]
+        `INSERT INTO messages (sender_id, recipient_id, text, file_url, file_type, file_name, reply_to_id, is_forwarded, group_id, is_delivered) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id, sender_id AS "senderId", recipient_id AS "to", group_id AS "groupId", text, file_url AS "fileUrl", file_type AS "fileType", file_name AS "fileName", reply_to_id AS "replyToId", is_forwarded AS "isForwarded", created_at AS "createdAt", is_edited AS "isEdited", is_deleted AS "isDeleted", is_delivered AS "isDelivered", is_read AS "isRead"`,
+        [senderId, recipientId, text, fileUrl, fileType, fileName, replyToId, isForwarded, groupId, isDelivered]
       );
       return result.rows[0];
     } catch (error) {
@@ -20,6 +20,7 @@ export const messageRepository = {
     const result = await pool.query(
       `SELECT m.id, m.sender_id AS "senderId", m.recipient_id AS "to", m.group_id AS "groupId", m.text, m.file_url AS "fileUrl", m.file_type AS "fileType", m.file_name AS "fileName", 
               m.reply_to_id AS "replyToId", m.is_forwarded AS "isForwarded", m.created_at AS "createdAt", m.is_edited AS "isEdited", m.is_deleted AS "isDeleted",
+              m.is_delivered AS "isDelivered", m.is_read AS "isRead",
               rm.text AS "replyToText", rm.sender_id AS "replyToSenderId",
               u.username AS "senderName", u.avatar_url AS "senderAvatar",
               (mv.id IS NOT NULL) AS "isLocallyDeleted"
@@ -38,6 +39,7 @@ export const messageRepository = {
     const result = await pool.query(
       `SELECT m.id, m.sender_id AS "senderId", m.recipient_id AS "to", m.text, m.file_url AS "fileUrl", m.file_type AS "fileType", m.file_name AS "fileName", 
               m.reply_to_id AS "replyToId", m.is_forwarded AS "isForwarded", m.created_at AS "createdAt", m.is_edited AS "isEdited", m.is_deleted AS "isDeleted",
+              m.is_delivered AS "isDelivered", m.is_read AS "isRead",
               rm.text AS "replyToText", rm.sender_id AS "replyToSenderId",
               (mv.id IS NOT NULL) AS "isLocallyDeleted"
        FROM messages m
@@ -81,5 +83,37 @@ export const messageRepository = {
       [id, userId]
     );
     return result.rows[0];
+  },
+
+  markAsDelivered: async (recipientId) => {
+    try {
+      const result = await pool.query(
+        `UPDATE messages 
+         SET is_delivered = true 
+         WHERE recipient_id = $1 AND is_delivered = false
+         RETURNING id, sender_id AS "senderId"`,
+        [recipientId]
+      );
+      return result.rows;
+    } catch (error) {
+      console.error(`[DATABASE-ERROR] Failed to mark messages as delivered: ${error.message}`);
+      throw error;
+    }
+  },
+
+  markAsRead: async (senderId, recipientId) => {
+    try {
+      const result = await pool.query(
+        `UPDATE messages 
+         SET is_read = true, is_delivered = true
+         WHERE sender_id = $1 AND recipient_id = $2 AND is_read = false
+         RETURNING id`,
+        [senderId, recipientId]
+      );
+      return result.rows;
+    } catch (error) {
+      console.error(`[DATABASE-ERROR] Failed to mark messages as read: ${error.message}`);
+      throw error;
+    }
   }
 };
